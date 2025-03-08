@@ -2,6 +2,9 @@ import os
 import re
 from typing import Dict, List, Tuple, Any
 
+# Import the new reference dictionary
+from coq_imports import add_required_imports
+
 class HybridTranslator:
     """
     A hybrid translation system that combines rule-based translation with LLM-powered translation.
@@ -81,7 +84,7 @@ class HybridTranslator:
             
             # Add basic imports
             coq_code.append("Require Import Arith.")
-            coq_code.append("Require Import Lia.")
+            coq_code.append("Require Import Ring.")  # Added Ring import
             coq_code.append("")
             
             # Create a basic theorem statement
@@ -140,7 +143,7 @@ class HybridTranslator:
         """Create a fixed template for evenness proofs"""
         coq_code = [
             "Require Import Arith.",
-            "Require Import Lia.",
+            "Require Import Ring.",  # Added Ring import
             "",
             "Theorem example: forall x: nat, exists k: nat, x + x = 2 * k.",
             "Proof.",
@@ -155,7 +158,7 @@ class HybridTranslator:
         """Create a template for oddness proofs (will use Admitted since this is mathematically incorrect)"""
         coq_code = [
             "Require Import Arith.",
-            "Require Import Lia.",
+            "Require Import Ring.",  # Added Ring import
             "",
             "Theorem example: forall x: nat, exists k: nat, x + x = 2 * k + 1.",
             "Proof.",
@@ -183,7 +186,11 @@ class HybridTranslator:
             
             # Use LLM for translation
             from llm_translator import translate_to_coq_with_llm
-            return translate_to_coq_with_llm(parsed_data, self.llm_translator)
+            coq_code = translate_to_coq_with_llm(parsed_data, self.llm_translator)
+            
+            # Post-process to add missing imports
+            coq_code = add_required_imports(coq_code)
+            return coq_code
         else:
             # First try rule-based translation (original behavior)
             rule_based_coq, success = self.translate_with_rules(parsed_data)
@@ -191,6 +198,8 @@ class HybridTranslator:
             # Check if rule-based translation was successful and complete
             if success and "LLM needed for" not in rule_based_coq and "Admitted" not in rule_based_coq:
                 print("Rule-based translation succeeded.")
+                # Still add any missing imports
+                rule_based_coq = add_required_imports(rule_based_coq)
                 return rule_based_coq
             
             # If rule-based translation failed or was incomplete and fallback is enabled
@@ -209,9 +218,14 @@ class HybridTranslator:
                 
                 # Use LLM for translation
                 from llm_translator import translate_to_coq_with_llm
-                return translate_to_coq_with_llm(parsed_data, self.llm_translator)
+                coq_code = translate_to_coq_with_llm(parsed_data, self.llm_translator)
+                
+                # Post-process to add missing imports
+                coq_code = add_required_imports(coq_code)
+                return coq_code
             
-            # If fallback is disabled, return the partial rule-based translation
+            # If fallback is disabled, return the partial rule-based translation with imports
+            rule_based_coq = add_required_imports(rule_based_coq)
             return rule_based_coq
 
 # Function to integrate with existing pipeline

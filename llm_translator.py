@@ -20,24 +20,61 @@ class LLMTranslator:
         
         # Default few-shot examples if none provided
         self.few_shot_examples = few_shot_examples or [
+    {
+        "informal": "Assume x is a natural number. Then x + x is even.",
+        "coq": """Require Import Arith.
+        Require Import ArithRing.
+
+        Theorem example: forall x: nat, exists k: nat, x + x = 2 * k.
+        Proof.
+        intros x.
+        exists x.
+        simpl.
+        reflexivity.
+        Qed."""
+            },
             {
-                "informal": "Assume x is a natural number. Then x + x is even.",
-                "coq": """Theorem example: forall x: nat, exists k: nat, x + x = 2 * k.
-Proof.
-  intros x.
-  exists x.
-  ring.
-Qed."""
+                "informal": "If n is an even natural number, then n*n is even.",
+                "coq": """Require Import Arith.
+        Require Import ArithRing.
+
+        Theorem square_even: forall n: nat, (exists k: nat, n = 2 * k) -> (exists m: nat, n * n = 2 * m).
+        Proof.
+        intros n [k Hk].
+        exists (k * n).
+        rewrite Hk.
+        rewrite mult_assoc.
+        simpl.
+        reflexivity.
+        Qed."""
             },
             {
                 "informal": "Let n be an integer. If n is odd, then n^2 is odd.",
-                "coq": """Theorem odd_square: forall n: Z, (exists k: Z, n = 2 * k + 1) -> (exists j: Z, n^2 = 2 * j + 1).
-Proof.
-  intros n [k H].
-  exists (2 * k * k + 2 * k).
-  rewrite H.
-  ring.
-Qed."""
+                "coq": """Require Import ZArith.
+        Open Scope Z_scope.
+        Require Import ZArithRing.
+
+        Theorem odd_square: forall n: Z, (exists k: Z, n = 2 * k + 1) -> (exists j: Z, n^2 = 2 * j + 1).
+        Proof.
+        intros n [k H].
+        exists (2 * k * k + 2 * k).
+        rewrite H.
+        ring.
+        Qed."""
+            },
+            {
+                "informal": "The sum of two even integers is even.",
+                "coq": """Require Import ZArith.
+        Open Scope Z_scope.
+        Require Import ZArithRing.
+
+        Theorem sum_even: forall a b: Z, (exists k: Z, a = 2 * k) -> (exists m: Z, b = 2 * m) -> (exists n: Z, a + b = 2 * n).
+        Proof.
+        intros a b [k Hk] [m Hm].
+        exists (k + m).
+        rewrite Hk, Hm.
+        ring.
+        Qed."""
             }
         ]
     
@@ -322,6 +359,10 @@ def translate_to_coq_with_llm(parsed_data, llm_translator=None):
     if not is_valid:
         print(f"Initial translation had issues: {error_message}")
         coq_code = llm_translator.refine_translation(original_proof, coq_code, error_message)
+    
+    # Add any missing imports or scope directives
+    from coq_imports import add_required_imports
+    coq_code = add_required_imports(coq_code)
     
     print("Generated Coq Code:")
     print(coq_code)
