@@ -23,9 +23,11 @@ from nlp.proof_parser import parse_math_proof
 from nlp.domain_detector import DomainDetector
 from nlp.pattern_recognizer import PatternRecognizer 
 from ir.proof_builder import ProofBuilder
+from translation.translator import translate_proof
 from translation.strategy_selector import select_translation_strategy
 from backends.backend_interface import BackendRegistry
 from utils.error_handler import handle_error
+from translation.hybrid_translator import HybridTranslator
 
 logger = logging.getLogger("formal_verification")
 logger.setLevel(logging.DEBUG)
@@ -417,8 +419,9 @@ async def process_proof(
         # Recognize pattern
         pattern_recognizer = PatternRecognizer()
         pattern_info = pattern_recognizer.recognize_pattern(proof_text)
+        
+        # Prepare proof IR
         proof_builder = ProofBuilder()
-        # Build intermediate representation
         proof_ir = proof_builder.build_proof_ir(
             parsed_statements=parsed_info["parsed_statements"],
             proof_structure=parsed_info["proof_structure"],
@@ -426,14 +429,11 @@ async def process_proof(
             original_proof=proof_text
         )
         
-        # Select translation strategy
-        strategy_info = select_translation_strategy(
-            proof_ir=proof_ir,
-            target_prover=target_prover,
-            use_llm=use_llm
-        )
+        # Create hybrid translator
+        from translation.hybrid_translator import HybridTranslator
+        translator = HybridTranslator(use_llm=use_llm, target_prover=target_prover)
         
-        # Get the appropriate backend
+        # Get the appropriate backend for verification
         try:
             backend = BackendRegistry.get_backend(target_prover)
         except ValueError as e:
@@ -445,8 +445,8 @@ async def process_proof(
                 "error_message": str(e)
             }
         
-        # Translate to formal proof
-        formal_proof = backend.translate(proof_ir)
+        # Translate the proof
+        formal_proof = translator.translate(proof_ir)
         
         # Verify the proof
         verification_success = False
@@ -454,6 +454,21 @@ async def process_proof(
         
         if backend.is_installed():
             verification_success, error_message = backend.verify(formal_proof)
+            
+            # If verification failed and using LLM, try rule-based as fallback
+            if not verification_success and use_llm:
+                logger.info("LLM translation failed verification. Trying rule-based fallback.")
+                rule_based_proof = translator.translate_with_rules(proof_ir)
+                
+                # Verify the rule-based translation
+                rb_success, rb_error = backend.verify(rule_based_proof)
+                
+                # If rule-based succeeds where LLM failed, use it instead
+                if rb_success:
+                    formal_proof = rule_based_proof
+                    verification_success = rb_success
+                    error_message = None
+                    logger.info("Rule-based fallback succeeded where LLM failed.")
         
         return {
             "formal_proof": formal_proof,
@@ -472,7 +487,6 @@ async def process_proof(
             "pattern_info": {},
             "error_message": str(e)
         }
-
 # API routes
 @app.get("/", response_class=HTMLResponse)
 async def get_root(request: Request):
