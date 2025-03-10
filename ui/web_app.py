@@ -19,8 +19,8 @@ from pydantic import BaseModel
 import uvicorn
 
 from nlp.proof_parser import parse_math_proof
-from nlp.domain_detector import detect_domain
-from nlp.pattern_recognizer import recognize_pattern
+from nlp.domain_detector import DomainDetector
+from nlp.pattern_recognizer import PatternRecognizer 
 from ir.proof_builder import build_proof_ir
 from translation.strategy_selector import select_translation_strategy
 from backends.backend_interface import BackendRegistry
@@ -404,10 +404,12 @@ async def process_proof(
             theorem_text = proof_text = parsed_info["original_text"]
         
         # Detect domain
-        domain_info = detect_domain(theorem_text, proof_text)
+        domain_detector = DomainDetector()
+        domain_info = domain_detector.detect_domain(theorem_text, proof_text)
         
         # Recognize pattern
-        pattern_info = recognize_pattern(proof_text)
+        pattern_recognizer = PatternRecognizer()
+        pattern_info = pattern_recognizer.recognize_pattern(proof_text)
         
         # Build intermediate representation
         proof_ir = build_proof_ir(
@@ -575,7 +577,8 @@ async def detect_domain_api(input_data: ProofInput):
             theorem_text = proof_text = parsed_info["original_text"]
         
         # Detect domain
-        domain_info = detect_domain(theorem_text, proof_text)
+        domain_detector = DomainDetector()
+        domain_info = domain_detector.detect_domain(theorem_text, proof_text)
         
         return domain_info
     
@@ -606,7 +609,8 @@ async def recognize_pattern_api(input_data: ProofInput):
             proof_text = parsed_info["original_text"]
         
         # Recognize pattern
-        pattern_info = recognize_pattern(proof_text)
+        pattern_recognizer = PatternRecognizer()
+        pattern_info = pattern_recognizer.recognize_pattern(proof_text)
         
         return pattern_info
     
