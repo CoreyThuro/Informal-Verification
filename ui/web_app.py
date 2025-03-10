@@ -43,7 +43,7 @@ class TranslationResponse(BaseModel):
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Mathematical Proof Translator",
+    title="Informal Verfication",
     description="Translate informal mathematical proofs to formal proofs in Coq or Lean",
     version="1.0.0"
 )
@@ -67,13 +67,13 @@ if not os.path.exists(index_template_path):
         f.write("""<!DOCTYPE html>
 <html>
 <head>
-    <title>Mathematical Proof Translator</title>
+    <title>Informal Verification</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
     <div class="container">
-        <h1>Mathematical Proof Translator</h1>
+        <h1>Informal Verification</h1>
         <p>Translate informal mathematical proofs to formal proofs in Coq or Lean.</p>
         
         <form id="proofForm" method="post" action="/translate">
