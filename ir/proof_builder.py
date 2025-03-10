@@ -421,3 +421,21 @@ class ProofBuilder:
         
         # Default to 'n' if no variable is found
         return 'n'
+    
+    def build_proof_ir(parsed_statements, proof_structure, original_theorem, original_proof):
+        """
+        Wrapper function that creates a ProofBuilder and builds a ProofIR
+        from the parsed proof data.
+
+        Args:
+            parsed_statements: The parsed statements from the proof parser
+            proof_structure: The structure information from the parser
+            original_theorem: The original theorem text
+            original_proof: The original proof text
+            
+        Returns:
+            A ProofIR object representing the proof
+        """
+        builder = ProofBuilder()
+        parsed_proof = (parsed_statements, proof_structure)
+        return builder.build_from_parsed(original_theorem, parsed_proof, original_proof)

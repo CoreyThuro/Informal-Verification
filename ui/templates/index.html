@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mathematical Proof Translator</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="container">
+        <h1>Mathematical Proof Translator</h1>
+        <p>Translate informal mathematical proofs to formal proofs in Coq or Lean.</p>
+        
+        <form id="proofForm" method="post" action="/translate">
+            <div class="form-group">
+                <label for="proofText">Proof Text:</label>
+                <textarea id="proofText" name="proof_text" rows="10" placeholder="Enter your informal proof here...">{{ proof_text }}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="targetProver">Target Theorem Prover:</label>
+                <select id="targetProver" name="target_prover">
+                    <option value="coq" {% if target_prover == "coq" %}selected{% endif %}>Coq</option>
+                    <option value="lean" {% if target_prover == "lean" %}selected{% endif %}>Lean</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="useLLM">
+                    <input type="checkbox" id="useLLM" name="use_llm" value="true" {% if use_llm %}checked{% endif %}>
+                    Use Language Model Assistance
+                </label>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit">Translate</button>
+                <button type="button" id="clearButton">Clear</button>
+            </div>
+        </form>
+        
+        {% if formal_proof %}
+        <div class="result-section">
+            <h2>Translation Result</h2>
+            
+            <div class="info-panel">
+                <div class="info-box">
+                    <h3>Domain</h3>
+                    <p>{{ domain_info.primary_domain }}</p>
+                </div>
+                
+                <div class="info-box">
+                    <h3>Proof Pattern</h3>
+                    <p>{{ pattern_info.primary_pattern.name }}</p>
+                </div>
+                
+                <div class="info-box verification-{{ "success" if verification_success else "failure" }}">
+                    <h3>Verification</h3>
+                    <p>{{ "Success ✓" if verification_success else "Failed ✗" }}</p>
+                </div>
+            </div>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <h3>{{ target_prover|upper }} Proof</h3>
+                    <button id="copyButton">Copy</button>
+                </div>
+                <pre id="formalProof"><code>{{ formal_proof }}</code></pre>
+            </div>
+            
+            {% if error_message %}
+            <div class="error-message">
+                <h3>Error Message</h3>
+                <pre>{{ error_message }}</pre>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

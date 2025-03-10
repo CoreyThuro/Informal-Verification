@@ -21,7 +21,7 @@ import uvicorn
 from nlp.proof_parser import parse_math_proof
 from nlp.domain_detector import DomainDetector
 from nlp.pattern_recognizer import PatternRecognizer 
-from ir.proof_builder import build_proof_ir
+from ir.proof_builder import ProofBuilder
 from translation.strategy_selector import select_translation_strategy
 from backends.backend_interface import BackendRegistry
 from utils.error_handler import handle_error
@@ -410,9 +410,9 @@ async def process_proof(
         # Recognize pattern
         pattern_recognizer = PatternRecognizer()
         pattern_info = pattern_recognizer.recognize_pattern(proof_text)
-        
+        proof_builder = ProofBuilder()
         # Build intermediate representation
-        proof_ir = build_proof_ir(
+        proof_ir = proof_builder.build_proof_ir(
             parsed_statements=parsed_info["parsed_statements"],
             proof_structure=parsed_info["proof_structure"],
             original_theorem=theorem_text,
