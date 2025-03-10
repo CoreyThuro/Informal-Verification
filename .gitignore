@@ -22,4 +22,4 @@ build/
 .idea/
 .vscode/
 *.swp
-*.swo
+*.swo.env
