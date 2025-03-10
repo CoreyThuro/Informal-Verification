@@ -1,0 +1,7 @@
+Assume x is a natural number. Then x + x is even.
+
+Proof:
+An even number is one that can be expressed as 2k for some integer k.
+Let's consider x + x, which equals 2x.
+Since 2x = 2 * x, and x is some natural number, we can see that 2x is exactly of the form 2k where k = x.
+Therefore, x + x is even.
