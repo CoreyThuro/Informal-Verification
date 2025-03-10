@@ -5,6 +5,7 @@ Determines optimal translation strategies for different theorem provers.
 
 from typing import Dict, List, Tuple, Any, Optional, Union
 from enum import Enum
+import logging
 
 from ir.proof_ir import ProofIR, TacticInfo, TacticType
 from ir.proof_builder import ProofBuilder
@@ -380,11 +381,34 @@ def select_translation_strategy(proof_ir: ProofIR, target_prover: str,
     Returns:
         Dictionary with strategy information
     """
+    import logging
+    logger = logging.getLogger("proof_translator")
+    
+    logger.info(f"Selecting strategy: target_prover={target_prover}, use_llm={use_llm}")
+    
     selector = StrategySelector(use_llm=use_llm)
-    return selector.select_strategy(proof_ir, target_prover)
+    
+    if use_llm:
+        # Check if OpenAI is available
+        try:
+            from llm.openai_client import verify_openai_setup
+            is_configured, message = verify_openai_setup()
+            logger.info(f"LLM setup: {message}")
+            
+            if not is_configured:
+                logger.warning("LLM requested but not configured. Will fall back to rule-based translation.")
+                selector = StrategySelector(use_llm=False)
+        except ImportError:
+            logger.warning("OpenAI client not available. Will fall back to rule-based translation.")
+            selector = StrategySelector(use_llm=False)
+    
+    strategy_info = selector.select_strategy(proof_ir, target_prover)
+    logger.info(f"Selected strategy: {strategy_info['strategy']}")
+    
+    return strategy_info
 
 def get_optimal_strategy(theorem_text: str, proof_text: str, 
-                        target_prover: str) -> Dict[str, Any]:
+                        target_prover: str, use_llm: bool = False) -> Dict[str, Any]:
     """
     Get the optimal translation strategy directly from theorem and proof text.
     
@@ -392,10 +416,15 @@ def get_optimal_strategy(theorem_text: str, proof_text: str,
         theorem_text: The theorem statement
         proof_text: The proof text
         target_prover: The target theorem prover
+        use_llm: Whether to use language model assistance
         
     Returns:
         Dictionary with strategy information
     """
+    logger = logging.getLogger("proof_translator")
+    
+    logger.info(f"Getting optimal strategy: target_prover={target_prover}, use_llm={use_llm}")
+    
     # Parse the proof
     parsed_statements, proof_structure = parse_proof(proof_text)
     
@@ -409,8 +438,7 @@ def get_optimal_strategy(theorem_text: str, proof_text: str,
     
     # Create a minimal proof IR
     proof_builder = ProofBuilder()
-    build_proof_ir = proof_builder.build_proof_ir
-    proof_ir = build_proof_ir(
+    proof_ir = proof_builder.build_proof_ir(
         parsed_statements=parsed_statements,
         proof_structure=proof_structure,
         original_theorem=theorem_text,
@@ -418,5 +446,5 @@ def get_optimal_strategy(theorem_text: str, proof_text: str,
     )
     
     # Select strategy
-    selector = StrategySelector()
+    selector = StrategySelector(use_llm=use_llm)
     return selector.select_strategy(proof_ir, target_prover)

@@ -211,3 +211,31 @@ def analyze_proof_with_openai(theorem: str, proof: str, model: str = "gpt-3.5-tu
     
     client = get_openai_client(model=model)
     return analyze_proof_with_llm(theorem, proof, client)
+
+def verify_openai_setup():
+    """
+    Verify that the OpenAI client can be initialized with the API key.
+    
+    Returns:
+        Tuple of (is_configured, message)
+    """
+    import os
+    
+    # Check if API key is in environment variables
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        return False, "OPENAI_API_KEY environment variable not set"
+    
+    try:
+        # Try to import OpenAI
+        from openai import OpenAI
+        
+        # Try to initialize the client
+        client = OpenAI(api_key=api_key)
+        
+        # If we got here, initialization was successful
+        return True, f"OpenAI client initialized successfully. API key starts with: {api_key[:4]}..."
+    except ImportError:
+        return False, "OpenAI Python library not installed. Install with 'pip install openai'"
+    except Exception as e:
+        return False, f"Error initializing OpenAI client: {str(e)}"

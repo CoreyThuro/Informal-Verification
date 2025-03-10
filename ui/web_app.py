@@ -7,6 +7,7 @@ import os
 import sys
 import json
 from typing import Dict, List, Any, Optional
+import logging
 
 # Add parent directory to path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -25,6 +26,12 @@ from ir.proof_builder import ProofBuilder
 from translation.strategy_selector import select_translation_strategy
 from backends.backend_interface import BackendRegistry
 from utils.error_handler import handle_error
+
+logger = logging.getLogger("formal_verification")
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 # Define API models
 class ProofInput(BaseModel):
@@ -90,12 +97,12 @@ if not os.path.exists(index_template_path):
                 </select>
             </div>
             
-            <div class="form-group">
-                <label for="useLLM">
-                    <input type="checkbox" id="useLLM" name="use_llm" value="true" {% if use_llm %}checked{% endif %}>
-                    Use Language Model Assistance
-                </label>
-            </div>
+        <div class="form-group">
+            <label for="useLLM">
+                <input type="checkbox" id="useLLM" name="use_llm" value="true" {% if use_llm %}checked{% endif %}>
+                Use Language Model Assistance
+            </label>
+        </div>
             
             <div class="button-group">
                 <button type="submit">Translate</button>
@@ -528,30 +535,51 @@ async def translate_form(
         }
     )
 
-@app.post("/api/translate", response_model=TranslationResponse)
-async def translate_api(
+@app.post("/translate", response_class=HTMLResponse)
+async def translate_form(
+    request: Request,
     background_tasks: BackgroundTasks,
-    input_data: ProofInput
+    proof_text: str = Form(...),
+    target_prover: str = Form("coq"),
+    use_llm: bool = Form(False)
 ):
     """
-    API endpoint for translation.
-    
-    Args:
-        background_tasks: Background tasks
-        input_data: The input data
-        
-    Returns:
-        JSON response with translation results
+    Handle form submission for translation.
     """
-    # Process the proof
-    result = await process_proof(
-        input_data.proof_text,
-        input_data.target_prover,
-        input_data.use_llm
-    )
+    # Log the received parameters
+    logger.info(f"Translation request received: target_prover={target_prover}, use_llm={use_llm}")
     
-    # Return the results
-    return result
+    # Check LLM configuration if needed
+    if use_llm:
+        from llm.openai_client import verify_openai_setup
+        is_configured, message = verify_openai_setup()
+        logger.info(f"LLM configuration: {message}")
+        
+        if not is_configured:
+            logger.warning("LLM assistance requested but not properly configured")
+    
+    # Process the proof
+    result = await process_proof(proof_text, target_prover, use_llm)
+    
+    # Log the strategy used
+    if use_llm and "strategy_info" in result:
+        logger.info(f"Using strategy: {result.get('strategy_info', {}).get('strategy', 'unknown')}")
+    
+    # Render the template with results
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "proof_text": proof_text,
+            "target_prover": target_prover,
+            "use_llm": use_llm,
+            "formal_proof": result["formal_proof"],
+            "verification_success": result["verification_success"],
+            "domain_info": result["domain_info"],
+            "pattern_info": result["pattern_info"],
+            "error_message": result["error_message"]
+        }
+    )
 
 @app.post("/api/domain")
 async def detect_domain_api(input_data: ProofInput):
