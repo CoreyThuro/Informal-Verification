@@ -67,13 +67,13 @@ if not os.path.exists(index_template_path):
         f.write("""<!DOCTYPE html>
 <html>
 <head>
-    <title>Informal Verification</title>
+    <title>In/formal Verification</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
     <div class="container">
-        <h1>Informal Verification</h1>
+        <h1>In/formal Verification</h1>
         <p>Translate informal mathematical proofs to formal proofs in Coq or Lean.</p>
         
         <form id="proofForm" method="post" action="/translate">
