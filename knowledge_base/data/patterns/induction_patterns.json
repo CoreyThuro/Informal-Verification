@@ -1,0 +1,41 @@
+{
+  "induction": {
+    "description": "Proof by induction",
+    "tactics": {
+      "coq": [
+        {
+          "tactic": "induction {var}",
+          "description": "Apply induction on variable {var}"
+        },
+        {
+          "tactic": "simpl",
+          "description": "Simplify the goal"
+        }
+      ],
+      "lean": [
+        {
+          "tactic": "induction {var}",
+          "description": "Apply induction on variable {var}"
+        },
+        {
+          "tactic": "simp",
+          "description": "Simplify the goal"
+        }
+      ]
+    },
+    "examples": {
+      "coq": [
+        {
+          "theorem": "forall n : nat, n + 0 = n",
+          "proof": "intros n. induction n. simpl. reflexivity. simpl. rewrite IHn. reflexivity."
+        }
+      ],
+      "lean": [
+        {
+          "theorem": "\u2200 n : Nat, n + 0 = n",
+          "proof": "by\n  intro n\n  induction n\n  case zero => rfl\n  case succ => simp [*]"
+        }
+      ]
+    }
+  }
+}

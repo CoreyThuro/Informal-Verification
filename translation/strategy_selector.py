@@ -11,7 +11,7 @@ from ir.proof_ir import ProofIR, TacticInfo, TacticType
 from ir.proof_builder import ProofBuilder
 from nlp.domain_detector import DomainDetector
 from nlp.pattern_recognizer import PatternRecognizer
-from nlp.proof_parser import parse_proof
+from nlp.proof_parser import ProofParser
 
 class TranslationStrategy(Enum):
     """Translation strategies for converting proofs to formal representations."""
@@ -426,7 +426,8 @@ def get_optimal_strategy(theorem_text: str, proof_text: str,
     logger.info(f"Getting optimal strategy: target_prover={target_prover}, use_llm={use_llm}")
     
     # Parse the proof
-    parsed_statements, proof_structure = parse_proof(proof_text)
+    proof_parser= ProofParser()
+    parsed_statements, proof_structure = proof_parser.parse_proof(proof_text)
     
     # Detect domain
     domain_detector = DomainDetector()

@@ -1,0 +1,41 @@
+{
+  "Mathlib.Data.Nat.Basic": {
+    "import": "import Mathlib.Data.Nat.Basic",
+    "description": "Basic natural number library",
+    "provides": [
+      "Nat",
+      "Nat.add",
+      "Nat.mul",
+      "Nat.sub",
+      "Nat.le",
+      "Nat.lt",
+      "Nat.max",
+      "Nat.min"
+    ],
+    "domains": [
+      "11"
+    ]
+  },
+  "Mathlib.Data.Nat.Parity": {
+    "import": "import Mathlib.Data.Nat.Parity",
+    "description": "Even and odd natural numbers",
+    "provides": [
+      "Even",
+      "Odd"
+    ],
+    "domains": [
+      "11"
+    ]
+  },
+  "Mathlib.Tactic.Ring": {
+    "import": "import Mathlib.Tactic.Ring",
+    "description": "Ring tactic for algebraic simplification",
+    "provides": [
+      "ring"
+    ],
+    "domains": [
+      "11",
+      "12-20"
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "Arith": {
+    "import": "Require Import Arith.",
+    "description": "Basic arithmetic library",
+    "provides": [
+      "nat",
+      "plus",
+      "mult",
+      "minus",
+      "le",
+      "lt",
+      "max",
+      "min",
+      "even",
+      "odd"
+    ],
+    "domains": [
+      "11"
+    ]
+  },
+  "ZArith": {
+    "import": "Require Import ZArith.",
+    "description": "Integer arithmetic library",
+    "provides": [
+      "Z",
+      "Z.add",
+      "Z.mul",
+      "Z.sub",
+      "Z.div",
+      "Z.modulo",
+      "Z.abs",
+      "Z.even",
+      "Z.odd",
+      "Z.gcd"
+    ],
+    "domains": [
+      "11"
+    ]
+  },
+  "Lia": {
+    "import": "Require Import Lia.",
+    "description": "Linear integer arithmetic solver",
+    "provides": [
+      "lia"
+    ],
+    "domains": [
+      "11"
+    ]
+  },
+  "Ring": {
+    "import": "Require Import Ring.",
+    "description": "Ring algebraic structure and tactics",
+    "provides": [
+      "ring",
+      "ring_simplify"
+    ],
+    "domains": [
+      "12-20"
+    ]
+  }
+}
