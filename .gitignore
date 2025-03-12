@@ -24,3 +24,5 @@ build/
 .vscode/
 *.swp
 *.swo
+
+__pycache__
