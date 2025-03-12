@@ -76,6 +76,35 @@ class TacticInfo:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
+class LibraryDependency:
+    """
+    Represents a dependency on a library or theorem.
+    """
+    name: str
+    import_path: str
+    concepts: List[str] = field(default_factory=list)
+    
+    def __hash__(self):
+        return hash((self.name, self.import_path))
+    
+    def __eq__(self, other):
+        if not isinstance(other, LibraryDependency):
+            return False
+        return self.name == other.name and self.import_path == other.import_path
+
+@dataclass
+class DomainContext:
+    """
+    Represents domain-specific context for a proof.
+    """
+    domain: str
+    subdomain: str = None
+    libraries: List[str] = field(default_factory=list)
+    theorems: List[str] = field(default_factory=list)
+    axioms: List[str] = field(default_factory=list)
+    notations: Dict[str, str] = field(default_factory=dict)
+
+@dataclass
 class ProofIR:
     """
     Complete intermediate representation of a mathematical proof.
@@ -102,6 +131,31 @@ class ProofIR:
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     
+    # Domain-specific context
+    domain_context: DomainContext = None
+    
+    # Library dependencies
+    library_dependencies: List[LibraryDependency] = field(default_factory=list)
+    
+    def __post_init__(self):
+        """Initialize domain context if not provided."""
+        if self.domain_context is None:
+            self.domain_context = DomainContext(self.domain.get("primary_domain", ""))
+    
+    def add_library_dependency(self, name: str, import_path: str, concepts: List[str] = None):
+        """
+        Add a library dependency to the IR.
+        
+        Args:
+            name: The library name
+            import_path: The import path
+            concepts: Optional list of concepts requiring this library
+        """
+        concepts = concepts or []
+        dependency = LibraryDependency(name, import_path, concepts)
+        if dependency not in self.library_dependencies:
+            self.library_dependencies.append(dependency)
+    
     def to_dict(self) -> Dict:
         """Convert the IR to a dictionary for serialization."""
         return {
@@ -120,13 +174,47 @@ class ProofIR:
             ],
             "original_theorem": self.original_theorem,
             "original_proof": self.original_proof,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "domain_context": {
+                "domain": self.domain_context.domain,
+                "subdomain": self.domain_context.subdomain,
+                "libraries": self.domain_context.libraries,
+                "theorems": self.domain_context.theorems,
+                "axioms": self.domain_context.axioms,
+                "notations": self.domain_context.notations
+            },
+            "library_dependencies": [
+                {
+                    "name": dep.name,
+                    "import_path": dep.import_path,
+                    "concepts": dep.concepts
+                }
+                for dep in self.library_dependencies
+            ]
         }
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'ProofIR':
         """Create an IR instance from a dictionary."""
-        return cls(
+        domain_context = DomainContext(
+            domain=data["domain_context"]["domain"],
+            subdomain=data["domain_context"]["subdomain"],
+            libraries=data["domain_context"]["libraries"],
+            theorems=data["domain_context"]["theorems"],
+            axioms=data["domain_context"]["axioms"],
+            notations=data["domain_context"]["notations"]
+        )
+        
+        library_dependencies = [
+            LibraryDependency(
+                name=dep["name"],
+                import_path=dep["import_path"],
+                concepts=dep["concepts"]
+            )
+            for dep in data["library_dependencies"]
+        ]
+        
+        ir = cls(
             theorem=cls._dict_to_node(data["theorem"]),
             proof_tree=[cls._dict_to_node(node) for node in data["proof_tree"]],
             domain=data["domain"],
@@ -142,8 +230,12 @@ class ProofIR:
             ],
             original_theorem=data["original_theorem"],
             original_proof=data["original_proof"],
-            metadata=data["metadata"]
+            metadata=data["metadata"],
+            domain_context=domain_context,
+            library_dependencies=library_dependencies
         )
+        
+        return ir
     
     @staticmethod
     def _node_to_dict(node: ProofNode) -> Dict:

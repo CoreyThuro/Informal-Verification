@@ -1,0 +1,46 @@
+{
+  "00": {
+    "name": "General Mathematics",
+    "description": "General mathematical topics"
+  },
+  "11": {
+    "name": "Number Theory",
+    "description": "Number theory, including divisibility, congruences, and primality"
+  },
+  "12": {
+    "name": "Field Theory and Polynomials",
+    "description": "Field theory and polynomials"
+  },
+  "13": {
+    "name": "Commutative Algebra",
+    "description": "Commutative algebra, rings, and ideals"
+  },
+  "14": {
+    "name": "Algebraic Geometry",
+    "description": "Algebraic geometry"
+  },
+  "15": {
+    "name": "Linear Algebra",
+    "description": "Linear and multilinear algebra, matrix theory"
+  },
+  "20": {
+    "name": "Group Theory",
+    "description": "Group theory and generalizations"
+  },
+  "26": {
+    "name": "Real Functions",
+    "description": "Real functions, analysis"
+  },
+  "30": {
+    "name": "Functions of a Complex Variable",
+    "description": "Complex analysis"
+  },
+  "54": {
+    "name": "General Topology",
+    "description": "General topology"
+  },
+  "55": {
+    "name": "Algebraic Topology",
+    "description": "Algebraic topology"
+  }
+}

@@ -5,11 +5,30 @@ Translates parsed proofs into the IR structure.
 
 from typing import Dict, List, Tuple, Any, Optional, Union
 import re
+import logging
 
 from ir.proof_ir import (
     ProofIR, ProofNode, Expression, NodeType, ExprType, TacticType, TacticInfo,
-    create_theorem_node, create_assumption_node, create_step_node, create_conclusion_node
+    create_theorem_node, create_assumption_node, create_step_node, create_conclusion_node,
+    DomainContext, LibraryDependency
 )
+
+# Import the knowledge base
+try:
+    from knowledge_base.domain_kb import DomainKnowledgeBase
+except ImportError:
+    # If knowledge base is not available, use a placeholder
+    class DomainKnowledgeBase:
+        def __init__(self, data_dir=None):
+            pass
+        
+        def get_libraries_for_concept(self, concept, domain=None, prover="coq"):
+            return []
+        
+        def get_domain_libraries(self, domain, prover="coq"):
+            return []
+
+logger = logging.getLogger("proof_builder")
 
 class ProofBuilder:
     """
@@ -18,12 +37,13 @@ class ProofBuilder:
     
     def __init__(self):
         """Initialize the builder."""
-        pass
+        # Initialize the knowledge base
+        self.kb = DomainKnowledgeBase()
     
     def build_from_parsed(self, 
-                        theorem_text: str, 
-                        parsed_proof: Tuple[List[List[Tuple[str, str, str]]], Dict[str, Any]],
-                        original_proof_text: str) -> ProofIR:
+                         theorem_text: str, 
+                         parsed_proof: Tuple[List[List[Tuple[str, str, str]]], Dict[str, Any]],
+                         original_proof_text: str) -> ProofIR:
         """
         Build a ProofIR from parsed theorem and proof.
         
@@ -52,8 +72,8 @@ class ProofBuilder:
         # Generate tactics
         tactics = self._generate_tactics(proof_structure, domain_info)
         
-        # Create and return the IR
-        return ProofIR(
+        # Create the IR
+        proof_ir = ProofIR(
             theorem=theorem_node,
             proof_tree=proof_tree,
             domain=domain_info,
@@ -62,6 +82,11 @@ class ProofBuilder:
             original_theorem=theorem_text,
             original_proof=original_proof_text
         )
+        
+        # Add domain-specific knowledge to IR
+        self._add_domain_context(proof_ir, domain_info, proof_structure)
+        
+        return proof_ir
     
     def _build_proof_tree(self, 
                         parsed_statements: List[List[Tuple[str, str, str]]], 
@@ -83,7 +108,7 @@ class ProofBuilder:
         processed_statements = set()
         
         # Process assumptions first
-        for assumption_text, tactic in proof_structure["assumptions"]:
+        for assumption_text, tactic in proof_structure.get("assumptions", []):
             # Find the corresponding statement
             for i, statement in enumerate(parsed_statements):
                 statement_text = " ".join([token[0] for token in statement])
@@ -95,7 +120,7 @@ class ProofBuilder:
                     break
         
         # Process any special proof methods (induction, contradiction, etc.)
-        for method, tactic, statement_text in proof_structure["proof_methods"]:
+        for method, tactic, statement_text in proof_structure.get("proof_methods", []):
             # Find the corresponding statement
             for i, statement in enumerate(parsed_statements):
                 curr_statement_text = " ".join([token[0] for token in statement])
@@ -154,7 +179,7 @@ class ProofBuilder:
                     break
         
         # Process conclusions
-        for conclusion_text, tactic in proof_structure["conclusions"]:
+        for conclusion_text, tactic in proof_structure.get("conclusions", []):
             # Find the corresponding statement
             for i, statement in enumerate(parsed_statements):
                 statement_text = " ".join([token[0] for token in statement])
@@ -202,12 +227,22 @@ class ProofBuilder:
         
         # Define domain keywords
         domain_keywords = {
-            "number_theory": ["prime", "divisible", "gcd", "modulo", "congruence", "integer", "factor"],
+            "number_theory": ["prime", "divisible", "gcd", "modulo", "congruence", "integer", "factor", "even", "odd"],
             "algebra": ["group", "ring", "field", "vector", "space", "linear", "matrix", "determinant"],
             "topology": ["open", "closed", "continuous", "compact", "connected", "neighborhood", "metric"],
             "analysis": ["limit", "derivative", "integral", "convergence", "sequence", "series", "function"],
             "geometry": ["triangle", "circle", "angle", "polygon", "distance", "line", "plane"],
             "set_theory": ["set", "subset", "union", "intersection", "complement", "element", "belongs"]
+        }
+        
+        # Map domain names to MSC codes
+        domain_to_msc = {
+            "number_theory": "11",
+            "algebra": "12-20",
+            "topology": "54-55",
+            "analysis": "26-42",
+            "geometry": "51-53",
+            "set_theory": "03"
         }
         
         # Count occurrences of keywords in each domain
@@ -224,29 +259,23 @@ class ProofBuilder:
         max_score = max(domain_scores.values())
         if max_score > 0:
             primary_domain = max(domain_scores.items(), key=lambda x: x[1])[0]
+            msc_code = domain_to_msc.get(primary_domain, "00")
         else:
             primary_domain = "general_mathematics"
+            msc_code = "00"
         
         # Check if the proof involves natural numbers or integers specifically
         is_discrete = any(term in combined_text for term in ["natural number", "integer", "even", "odd", "divisible"])
         
-        # Basic MSC (Mathematics Subject Classification) mapping
-        msc_mapping = {
-            "number_theory": "11",
-            "algebra": "12-16",
-            "topology": "54-55",
-            "analysis": "26-42",
-            "geometry": "51-53",
-            "set_theory": "03"
-        }
-        
-        msc_code = msc_mapping.get(primary_domain, "00")
+        # Check for evenness proofs specifically
+        is_evenness = "even" in combined_text and any(f"{var} + {var}" in combined_text for var in "abcdefghijklmnopqrstuvwxyz")
         
         return {
-            "domain": primary_domain,
+            "primary_domain": msc_code,
+            "domain_name": primary_domain,
             "confidence": max_score / (sum(domain_scores.values()) or 1),
             "involves_discrete": is_discrete,
-            "msc_code": msc_code,
+            "is_evenness_proof": is_evenness,
             "domain_scores": domain_scores
         }
     
@@ -261,7 +290,7 @@ class ProofBuilder:
             A dictionary with pattern information
         """
         # Check if there are any explicit proof methods
-        methods = [method for method, _, _ in proof_structure["proof_methods"]]
+        methods = [method for method, _, _ in proof_structure.get("proof_methods", [])]
         
         pattern = {}
         
@@ -287,10 +316,10 @@ class ProofBuilder:
             # No explicit method mentioned, infer from structure
             
             # Count statements with "assume" or "let" at the beginning
-            assumption_count = len(proof_structure["assumptions"])
+            assumption_count = len(proof_structure.get("assumptions", []))
             
             # Count statements with "therefore", "thus", "hence" at the beginning
-            conclusion_count = len(proof_structure["conclusions"])
+            conclusion_count = len(proof_structure.get("conclusions", []))
             
             if assumption_count > 0 and "even" in str(proof_structure):
                 # Check for evenness proofs (special case in our system)
@@ -332,9 +361,9 @@ class ProofBuilder:
         tactics = []
         
         # Add intros tactic for assumptions
-        if proof_structure["assumptions"]:
+        if proof_structure.get("assumptions", []):
             # Extract variables from assumptions
-            variables = [var for var in proof_structure["variables"] if var.isalpha()]
+            variables = [var for var in proof_structure.get("variables", []) if var.isalpha()]
             
             tactics.append(TacticInfo(
                 tactic_type=TacticType.INTRO,
@@ -343,12 +372,12 @@ class ProofBuilder:
             ))
         
         # Add specific tactics based on proof methods
-        methods = [method for method, _, _ in proof_structure["proof_methods"]]
+        methods = [method for method, _, _ in proof_structure.get("proof_methods", [])]
         
         if "induction" in methods:
             # Find the variable being inducted on
             induction_var = None
-            for _, _, statement in proof_structure["proof_methods"]:
+            for _, _, statement in proof_structure.get("proof_methods", []):
                 if "induction" in statement.lower():
                     # Extract the variable after "induction on"
                     match = re.search(r'induction on\s+([a-zA-Z])', statement, re.IGNORECASE)
@@ -378,21 +407,27 @@ class ProofBuilder:
             ))
         
         # Add domain-specific tactics
-        domain = domain_info.get("domain")
+        domain = domain_info.get("primary_domain")
         
-        if domain == "algebra" and "ring" in str(proof_structure):
-            tactics.append(TacticInfo(
-                tactic_type=TacticType.CUSTOM,
-                arguments=["ring"],
-                description="Use ring tactic for algebraic simplification"
-            ))
-        
-        if domain_info.get("involves_discrete", False) and "arithmetic" in str(proof_structure):
-            tactics.append(TacticInfo(
-                tactic_type=TacticType.CUSTOM,
-                arguments=["lia"],
-                description="Use linear integer arithmetic solver"
-            ))
+        if domain == "11":  # Number Theory
+            # Check for evenness proof
+            if domain_info.get("is_evenness_proof", False):
+                tactics.append(TacticInfo(
+                    tactic_type=TacticType.EXISTS,
+                    arguments=["n"],
+                    description="Provide witness for existential"
+                ))
+                tactics.append(TacticInfo(
+                    tactic_type=TacticType.CUSTOM,
+                    arguments=["ring"],
+                    description="Use ring tactic for algebraic simplification"
+                ))
+            else:
+                tactics.append(TacticInfo(
+                    tactic_type=TacticType.CUSTOM,
+                    arguments=["lia"],
+                    description="Use linear integer arithmetic solver"
+                ))
         
         # Add a default simplification tactic
         if not any(t.tactic_type == TacticType.SIMPLIFY for t in tactics):
@@ -421,6 +456,108 @@ class ProofBuilder:
         
         # Default to 'n' if no variable is found
         return 'n'
+    
+    def _add_domain_context(self, proof_ir: ProofIR, domain_info: Dict[str, Any], proof_structure: Dict[str, Any]) -> None:
+        """
+        Add domain-specific context to the IR.
+        
+        Args:
+            proof_ir: The proof IR
+            domain_info: The domain information
+            proof_structure: The proof structure
+        """
+        # Get domain from domain info
+        domain = domain_info.get("primary_domain", "00")
+        
+        # Create or update domain context
+        if proof_ir.domain_context is None:
+            proof_ir.domain_context = DomainContext(domain)
+        else:
+            proof_ir.domain_context.domain = domain
+        
+        # Add domain libraries
+        libraries = self.kb.get_domain_libraries(domain, "coq")
+        proof_ir.domain_context.libraries.extend(libraries)
+        
+        # Add libraries for concepts mentioned in the proof
+        concepts = self._extract_concepts(proof_ir)
+        for concept in concepts:
+            # Get libraries for this concept in this domain
+            concept_libraries = self.kb.get_libraries_for_concept(concept, domain, "coq")
+            for library in concept_libraries:
+                if library not in proof_ir.domain_context.libraries:
+                    proof_ir.domain_context.libraries.append(library)
+                
+                # Add library dependency to the IR
+                proof_ir.add_library_dependency(library, f"Require Import {library}.", [concept])
+        
+        # Handle evenness proof specially
+        if domain_info.get("is_evenness_proof", False):
+            # Ensure we have the necessary libraries for evenness proofs
+            if "Arith" not in proof_ir.domain_context.libraries:
+                proof_ir.domain_context.libraries.append("Arith")
+                proof_ir.add_library_dependency("Arith", "Require Import Arith.", ["even"])
+            
+            if "Ring" not in proof_ir.domain_context.libraries:
+                proof_ir.domain_context.libraries.append("Ring")
+                proof_ir.add_library_dependency("Ring", "Require Import Ring.", ["ring"])
+    
+    def _extract_concepts(self, proof_ir: ProofIR) -> List[str]:
+        """
+        Extract concepts mentioned in the proof.
+        
+        Args:
+            proof_ir: The proof IR
+            
+        Returns:
+            List of concepts
+        """
+        concepts = []
+        
+        # Extract variables from metadata
+        variables = proof_ir.metadata.get("variables", [])
+        concepts.extend(variables)
+        
+        # Extract concepts from theorem
+        if isinstance(proof_ir.theorem.content, str):
+            theorem_text = proof_ir.theorem.content
+            # Look for common mathematical concepts
+            if "even" in theorem_text.lower():
+                concepts.append("even")
+            if "odd" in theorem_text.lower():
+                concepts.append("odd")
+            if "prime" in theorem_text.lower():
+                concepts.append("prime")
+            if "divisible" in theorem_text.lower() or "divides" in theorem_text.lower():
+                concepts.append("divisible")
+        
+        # Extract concepts from proof tree
+        for node in proof_ir.proof_tree:
+            if isinstance(node.content, str):
+                node_text = node.content.lower()
+                if "even" in node_text:
+                    concepts.append("even")
+                if "odd" in node_text:
+                    concepts.append("odd")
+                if "prime" in node_text:
+                    concepts.append("prime")
+                if "divisible" in node_text or "divides" in node_text:
+                    concepts.append("divisible")
+        
+        # Extract concepts from the original proof
+        if proof_ir.original_proof:
+            proof_text = proof_ir.original_proof.lower()
+            if "even" in proof_text:
+                concepts.append("even")
+            if "odd" in proof_text:
+                concepts.append("odd")
+            if "prime" in proof_text:
+                concepts.append("prime")
+            if "divisible" in proof_text or "divides" in proof_text:
+                concepts.append("divisible")
+        
+        # Remove duplicates
+        return list(set(concepts))
     
     def build_proof_ir(self, parsed_statements, proof_structure, original_theorem, original_proof):
         """
