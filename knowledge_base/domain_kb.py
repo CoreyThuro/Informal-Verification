@@ -1,23 +1,23 @@
 """
-Domain knowledge base for mathematical domains.
-Manages domain-specific knowledge, concepts, and library mappings.
+Domain knowledge base for mathematical domains and proof translation.
+Provides centralized knowledge about mathematical concepts, libraries, and proof patterns.
 """
 
 import os
 import json
 import logging
-from typing import Dict, List, Any, Optional, Set, Tuple
+from typing import Dict, List, Tuple, Any, Optional, Set, Union
 
+# Configure logging
 logger = logging.getLogger("knowledge_base")
 
 class DomainKnowledgeBase:
     """
-    Central repository for domain-specific mathematical knowledge.
+    Centralized repository for domain-specific mathematical knowledge.
     
     This class manages knowledge about mathematical domains, concepts,
     libraries, and proof patterns. It provides mappings between concepts
-    and library imports, as well as information about domains based on the
-    Mathematics Subject Classification (MSC) system.
+    and library imports, as well as information about theorem provers.
     """
     
     def __init__(self, data_dir: Optional[str] = None):
@@ -43,6 +43,7 @@ class DomainKnowledgeBase:
             "lean": {}
         }
         self.patterns = {}  # Proof patterns
+        self.tactics = {}   # Domain-specific tactics
         
         # Load knowledge data
         self.load_knowledge()
@@ -56,7 +57,7 @@ class DomainKnowledgeBase:
         self._load_concepts()
         self._load_libraries()
         self._load_patterns()
-    
+
     def _load_domains(self):
         """Load MSC domain information."""
         domains_file = os.path.join(self.data_dir, 'msc_categories.json')
@@ -137,6 +138,26 @@ class DomainKnowledgeBase:
                     logger.debug(f"Loaded patterns from {filename}")
                 except (FileNotFoundError, json.JSONDecodeError) as e:
                     logger.warning(f"Could not load patterns from {filename}: {e}")
+    
+    def _load_tactics(self):
+        """Load domain-specific tactics information."""
+        tactics_dir = os.path.join(self.data_dir, 'tactics')
+        if not os.path.exists(tactics_dir):
+            os.makedirs(tactics_dir, exist_ok=True)
+            logger.warning(f"Created tactics directory: {tactics_dir}")
+            self._create_default_tactics()
+            return
+            
+        # Load each tactics file
+        for filename in os.listdir(tactics_dir):
+            if filename.endswith('.json'):
+                try:
+                    with open(os.path.join(tactics_dir, filename), 'r') as f:
+                        domain = filename.replace('.json', '')
+                        self.tactics[domain] = json.load(f)
+                    logger.debug(f"Loaded tactics from {filename}")
+                except (FileNotFoundError, json.JSONDecodeError) as e:
+                    logger.warning(f"Could not load tactics from {filename}: {e}")
     
     def _create_default_domains(self):
         """Create default MSC domain information."""
@@ -302,6 +323,8 @@ class DomainKnowledgeBase:
         induction_patterns = {
             "induction": {
                 "description": "Proof by induction",
+                "structure": ["base_case", "inductive_step", "conclusion"],
+                "keywords": ["induction", "base case", "inductive", "hypothesis", "step", "k", "k+1"],
                 "tactics": {
                     "coq": [
                         {"tactic": "induction {var}", "description": "Apply induction on variable {var}"},
@@ -338,6 +361,35 @@ class DomainKnowledgeBase:
         # Update patterns dictionary
         self.patterns.update(induction_patterns)
         logger.info(f"Created default induction patterns in {induction_file}")
+    
+    def _create_default_tactics(self):
+        """Create default domain-specific tactics."""
+        number_theory_tactics = {
+            "general": [
+                {"name": "lia", "prover": "coq", "description": "Linear integer arithmetic solver"},
+                {"name": "linarith", "prover": "lean", "description": "Linear arithmetic solver"}
+            ],
+            "induction": [
+                {"name": "induction {var}", "prover": "coq", "description": "Induction on variable"},
+                {"name": "induction {var}", "prover": "lean", "description": "Induction on variable"}
+            ],
+            "evenness": [
+                {"name": "exists {var}", "prover": "coq", "description": "Provide witness for evenness"},
+                {"name": "use {var}", "prover": "lean", "description": "Provide witness for evenness"},
+                {"name": "ring", "prover": "coq", "description": "Solve with ring arithmetic"},
+                {"name": "ring", "prover": "lean", "description": "Solve with ring arithmetic"}
+            ]
+        }
+        
+        # Save number theory tactics
+        nt_tactics_file = os.path.join(self.data_dir, 'tactics', '11.json')
+        os.makedirs(os.path.dirname(nt_tactics_file), exist_ok=True)
+        with open(nt_tactics_file, 'w') as f:
+            json.dump(number_theory_tactics, f, indent=2)
+        
+        # Update tactics dictionary
+        self.tactics["11"] = number_theory_tactics
+        logger.info(f"Created default number theory tactics in {nt_tactics_file}")
     
     def get_domain_info(self, domain_code: str) -> Dict[str, Any]:
         """
@@ -444,68 +496,48 @@ class DomainKnowledgeBase:
         
         return libraries
     
-    def get_domain_concepts(self, domain: str) -> List[str]:
+    def get_domain_tactics(self, domain: str, pattern: Optional[str] = None, prover: str = "coq") -> List[Dict[str, str]]:
         """
-        Get concepts associated with a mathematical domain.
+        Get tactics for a domain and pattern.
         
         Args:
             domain: The MSC code for the domain
-            
-        Returns:
-            List of concepts in the domain
-        """
-        domain_concepts = []
-        
-        # Find concepts in the domain
-        for concept, info in self.concepts.items():
-            if "domains" in info and domain in info["domains"]:
-                domain_concepts.append(concept)
-        
-        return domain_concepts
-    
-    def get_domain_tactics(self, domain: str, prover: str = "coq") -> List[Dict[str, str]]:
-        """
-        Get common tactics for a mathematical domain.
-        
-        Args:
-            domain: The MSC code for the domain
+            pattern: Optional proof pattern
             prover: The target theorem prover
             
         Returns:
-            List of tactics for the domain
+            List of tactics for the domain and pattern
         """
         tactics = []
         
-        # Find tactics in pattern information
-        for pattern_type, pattern_info in self.patterns.items():
-            for pattern_name, pattern_data in pattern_info.items():
-                if "tactics" in pattern_data and prover in pattern_data["tactics"]:
-                    tactics.extend(pattern_data["tactics"][prover])
+        # Get general tactics for the domain
+        if domain in self.tactics:
+            for tactic in self.tactics[domain].get("general", []):
+                if tactic["prover"] == prover:
+                    tactics.append(tactic)
+            
+            # Add pattern-specific tactics
+            if pattern and pattern in self.tactics[domain]:
+                for tactic in self.tactics[domain][pattern]:
+                    if tactic["prover"] == prover:
+                        tactics.append(tactic)
         
         return tactics
     
-    def get_examples(self, domain: str, pattern: str, prover: str = "coq") -> List[Dict[str, str]]:
+    def get_pattern_info(self, pattern: str) -> Optional[Dict[str, Any]]:
         """
-        Get example proofs for a domain and pattern.
+        Get information about a proof pattern.
         
         Args:
-            domain: The MSC code for the domain
-            pattern: The proof pattern
-            prover: The target theorem prover
+            pattern: The pattern name
             
         Returns:
-            List of example proofs
+            Dictionary with pattern information, or None if not found
         """
-        examples = []
-        
-        # Find examples in pattern information
-        for pattern_type, pattern_info in self.patterns.items():
-            if pattern in pattern_info:
-                pattern_data = pattern_info[pattern]
-                if "examples" in pattern_data and prover in pattern_data["examples"]:
-                    examples.extend(pattern_data["examples"][prover])
-        
-        return examples
+        for pattern_type, patterns in self.patterns.items():
+            if pattern in patterns:
+                return patterns[pattern]
+        return None
     
     def add_concept(self, concept: str, definition: str, formal_definitions: Dict[str, str], 
                    domains: Dict[str, Dict[str, Any]]) -> None:
@@ -550,5 +582,58 @@ class DomainKnowledgeBase:
     
     def update_from_libraries(self) -> None:
         """Update knowledge base from library connectors."""
-        # This will be implemented when library connectors are available
+        # This would be implemented when library connectors are available
         pass
+
+
+# Create a global instance
+knowledge_base = DomainKnowledgeBase()
+
+def get_knowledge_base() -> DomainKnowledgeBase:
+    """
+    Get the global knowledge base instance.
+    
+    Returns:
+        The global knowledge base instance
+    """
+    return knowledge_base
+
+def get_domain_info(domain_code: str) -> Dict[str, Any]:
+    """
+    Get information about a mathematical domain.
+    
+    Args:
+        domain_code: The MSC code for the domain
+        
+    Returns:
+        Dictionary with domain information
+    """
+    return knowledge_base.get_domain_info(domain_code)
+
+def get_concept_mapping(concept: str, domain: Optional[str] = None, prover: str = "coq") -> str:
+    """
+    Get the mapping of a concept to its representation in a theorem prover.
+    
+    Args:
+        concept: The concept name
+        domain: Optional domain for context
+        prover: The target theorem prover
+        
+    Returns:
+        The concept representation in the prover's syntax
+    """
+    return knowledge_base.get_concept_mapping(concept, domain, prover)
+
+def get_libraries_for_concept(concept: str, domain: Optional[str] = None, prover: str = "coq") -> List[str]:
+    """
+    Get required library imports for a concept.
+    
+    Args:
+        concept: The concept name
+        domain: Optional domain for context
+        prover: The target theorem prover
+        
+    Returns:
+        List of library imports
+    """
+    return knowledge_base.get_libraries_for_concept(concept, domain, prover)
