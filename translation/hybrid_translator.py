@@ -1,110 +1,68 @@
-"""
-Hybrid translator that combines rule-based and LLM approaches.
-"""
-
-from typing import Dict, List, Any, Optional, Union
-import logging
-import os
-import re
-
-from ir.proof_ir import ProofIR
+# translators/hybrid_translator.py
+from core.understanding.mathematical_parser import MathematicalParser
 from backends.backend_interface import BackendRegistry
-
-logger = logging.getLogger("proof_translator")
+from knowledge_base.simple_kb import SimpleKnowledgeBase
 
 class HybridTranslator:
-    """
-    Hybrid translator that uses LLM or rule-based approaches as appropriate.
-    """
+    """Hybrid translator that combines NaturalProofs with our backend."""
     
-    def __init__(self, use_llm: bool = False, target_prover: str = "coq"):
-        """
-        Initialize the hybrid translator.
-        
-        Args:
-            use_llm: Whether to use LLM assistance
-            target_prover: The target theorem prover
-        """
-        self.use_llm = use_llm
+    def __init__(self, target_prover="coq", model_path=None, use_llm=False):
+        self.parser = MathematicalParser(model_path)
+        self.kb = SimpleKnowledgeBase()
+        self.backend = BackendRegistry.get_backend(target_prover)
         self.target_prover = target_prover
-        
-        # Get the backend
-        try:
-            self.backend = BackendRegistry.get_backend(target_prover)
-        except ValueError as e:
-            logger.error(f"Backend error: {str(e)}")
-            raise
-        
-        # Check LLM configuration if needed
-        self.llm_configured = False
-        if use_llm:
-            try:
-                from llm.openai_client import verify_openai_setup
-                self.llm_configured, message = verify_openai_setup()
-                logger.info(f"LLM configuration: {message}")
-            except ImportError:
-                logger.warning("OpenAI client not available.")
+        self.use_llm = use_llm
     
-    def translate(self, proof_ir: ProofIR) -> str:
-        """
-        Translate the proof IR to the target language.
+    def translate(self, theorem_text, proof_text):
+        """Translate an informal proof to a formal proof."""
+        # Step 1: Parse and understand the proof
+        parsed_proof = self.parser.parse_proof(theorem_text, proof_text)
         
-        Args:
-            proof_ir: The proof intermediate representation
-            
-        Returns:
-            The translated proof
-        """
-        # If LLM is enabled and configured, try direct translation
-        if self.use_llm and self.llm_configured:
-            logger.info("Using direct LLM translation")
-            
-            # Extract theorem and proof from IR
-            theorem = proof_ir.original_theorem
-            proof = proof_ir.original_proof
-            
-            try:
-                # Try to use OpenAI directly
-                from llm.openai_client import translate_proof_with_openai
-                return translate_proof_with_openai(theorem, proof, self.target_prover)
-            except ImportError:
-                # Fall back to generic LLM interface
-                from llm.llm_interface import translate_proof_with_llm
-                return translate_proof_with_llm(theorem, proof, self.target_prover)
-            except Exception as e:
-                logger.warning(f"LLM translation failed: {str(e)}. Falling back to rule-based.")
+        # Step 2: Convert to our IR format
+        proof_ir = self.parser.convert_to_ir(parsed_proof)
         
-        # Otherwise, use the rule-based backend translation
-        logger.info("Using rule-based translation")
-        return self.translate_with_rules(proof_ir)
+        # Step 3: Enhance IR with domain-specific knowledge
+        self._enhance_with_domain_knowledge(proof_ir)
+        
+        # Step 4: Generate formal proof using our backend
+        formal_proof = self.backend.translate(proof_ir)
+        
+        # Step 5: Verify and refine if needed
+        if self.backend.is_installed():
+            verified, error_message = self.backend.verify(formal_proof)
+            if not verified and self.use_llm:
+                # Attempt to fix with LLM
+                formal_proof = self._fix_with_llm(formal_proof, error_message)
+        else:
+            verified, error_message = False, "Backend not installed"
+        
+        return {
+            "formal_proof": formal_proof,
+            "verified": verified,
+            "error_message": error_message,
+            "domain": parsed_proof["domain"],
+            "pattern": parsed_proof["pattern"]["name"]
+        }
     
-    def translate_with_rules(self, proof_ir: ProofIR) -> str:
-        """
-        Translate using only rule-based approaches.
+    def _enhance_with_domain_knowledge(self, proof_ir):
+        """Enhance the IR with domain-specific knowledge."""
+        domain = proof_ir.domain.get("primary_domain", "")
+        pattern = proof_ir.pattern.get("name", "")
         
-        Args:
-            proof_ir: The proof intermediate representation
-            
-        Returns:
-            The translated proof
-        """
-        logger.info(f"Using rule-based translation with {self.target_prover} backend")
-        return self.backend.translate(proof_ir)
-
-
-# Standalone functions for use in other modules
-
-def translate_proof(proof_ir: ProofIR, target_prover: str, use_llm: bool = False) -> str:
-    """
-    Translate a proof using the hybrid translator.
+        # Add domain-specific library dependencies
+        for var in proof_ir.metadata.get("variables", []):
+            libraries = self.kb.get_libraries_for_concept(var, domain, self.target_prover)
+            for library in libraries:
+                proof_ir.add_library_dependency(library, f"Required for {var}", [var])
+        
+        # Add pattern-specific tactics
+        tactics = self.kb.get_tactics_for_pattern(pattern, self.target_prover)
+        proof_ir.tactics.extend(tactics)
     
-    Args:
-        proof_ir: The proof intermediate representation
-        target_prover: The target theorem prover
-        use_llm: Whether to use LLM assistance
+    def _fix_with_llm(self, formal_proof, error_message):
+        """Attempt to fix the proof using LLM if enabled."""
+        if not self.use_llm:
+            return formal_proof
         
-    Returns:
-        The translated proof
-    """
-    translator = HybridTranslator(use_llm=use_llm, target_prover=target_prover)
-    return translator.translate(proof_ir)
+        # Implementation of LLM-based fixing would go here
+        return formal_proof
