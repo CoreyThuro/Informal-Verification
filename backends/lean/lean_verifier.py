@@ -93,39 +93,39 @@ class LeanVerifier:
         
         return temp_filename
     
-def process_error(self, error_message: str) -> Dict[str, Any]:
-    """
-    Process a Lean error message into structured information.
-    
-    Args:
-        error_message: The Lean error message
+    def process_error(self, error_message: str) -> Dict[str, Any]:
+        """
+        Process a Lean error message into structured information.
         
-    Returns:
-        Dictionary with structured error information
-    """
-    error_info = {
-        "type": "unknown",
-        "line": None,
-        "col": None,
-        "message": error_message,
-        "suggestion": None
-    }
-    
-    # Extract line and column information
-    location_match = re.search(r'(\w+\.lean):(\d+):(\d+):', error_message)
-    if location_match:
-        error_info["file"] = location_match.group(1)
-        error_info["line"] = int(location_match.group(2))
-        error_info["col"] = int(location_match.group(3))
-    
-    # Categorize common error types
-    if "unknown identifier" in error_message:
-        error_info["type"] = "unknown_identifier"
-        # Fixed regex pattern with proper escaping
-        identifier_match = re.search(r'unknown identifier [\'"`]([^\'"]+)[\'"`]', error_message)
-        if identifier_match:
-            error_info["identifier"] = identifier_match.group(1)
-            error_info["suggestion"] = f"The identifier '{identifier_match.group(1)}' is not defined. Check spelling or add necessary imports."
+        Args:
+            error_message: The Lean error message
+            
+        Returns:
+            Dictionary with structured error information
+        """
+        error_info = {
+            "type": "unknown",
+            "line": None,
+            "col": None,
+            "message": error_message,
+            "suggestion": None
+        }
+        
+        # Extract line and column information
+        location_match = re.search(r'(\w+\.lean):(\d+):(\d+):', error_message)
+        if location_match:
+            error_info["file"] = location_match.group(1)
+            error_info["line"] = int(location_match.group(2))
+            error_info["col"] = int(location_match.group(3))
+        
+        # Categorize common error types
+        if "unknown identifier" in error_message:
+            error_info["type"] = "unknown_identifier"
+            # Fixed regex pattern with proper escaping
+            identifier_match = re.search(r'unknown identifier [\'"`]([^\'"]+)[\'"`]', error_message)
+            if identifier_match:
+                error_info["identifier"] = identifier_match.group(1)
+                error_info["suggestion"] = f"The identifier '{identifier_match.group(1)}' is not defined. Check spelling or add necessary imports."
         
         elif "type mismatch" in error_message:
             error_info["type"] = "type_mismatch"
@@ -236,6 +236,18 @@ def process_error(self, error_message: str) -> Dict[str, Any]:
                 continue
         
         return None
+    
+    def _process_feedback_impl(self, error_message: str) -> Dict[str, Any]:
+        """
+        Process error feedback from Lean.
+        
+        Args:
+            error_message: The error message from Lean
+            
+        Returns:
+            Dictionary with structured error information
+        """
+        return self.process_error(error_message)
 
 
 # Standalone functions for use in other modules
