@@ -1,6 +1,6 @@
-# core/tokenization/tokenizer.py
 """
-Mathematical tokenization utilities adapted from NaturalProofs.
+Mathematical tokenization utilities.
+Enhanced version of tokenization from NaturalProofs.
 """
 
 import re
@@ -30,7 +30,7 @@ def replace_math_links(text: str) -> str:
     return '\n'.join(lines)
 
 class MathTokenizer:
-    """Tokenizer for mathematical text."""
+    """Tokenizer for mathematical text with enhanced features."""
     
     def __init__(self, model_type: str = 'bert-base-cased'):
         """
@@ -41,6 +41,15 @@ class MathTokenizer:
         """
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_type)
         self.model_max_length = self.tokenizer.model_max_length
+        self.special_tokens = {
+            "sep_token": self.tokenizer.sep_token,
+            "pad_token": self.tokenizer.pad_token,
+            "cls_token": self.tokenizer.cls_token
+        }
+        
+        # Log initialization
+        print(f"Initialized MathTokenizer with model: {model_type}")
+        print(f"Model max length: {self.model_max_length}")
     
     def tokenize_theorem(self, title: str, content: str = "", max_length: Optional[int] = None) -> Dict[str, Any]:
         """
@@ -112,3 +121,44 @@ class MathTokenizer:
             max_length=max_length or self.model_max_length,
             return_tensors="pt"
         )
+    
+    def convert_ids_to_tokens(self, ids: Union[List[int], torch.Tensor]) -> List[str]:
+        """
+        Convert token IDs to tokens.
+        
+        Args:
+            ids: Token IDs
+            
+        Returns:
+            List of tokens
+        """
+        if isinstance(ids, torch.Tensor):
+            ids = ids.tolist()
+        return self.tokenizer.convert_ids_to_tokens(ids)
+    
+    def convert_tokens_to_string(self, tokens: List[str]) -> str:
+        """
+        Convert tokens to string.
+        
+        Args:
+            tokens: List of tokens
+            
+        Returns:
+            Reconstructed string
+        """
+        return self.tokenizer.convert_tokens_to_string(tokens)
+    
+    def decode(self, ids: Union[List[int], torch.Tensor], skip_special_tokens: bool = True) -> str:
+        """
+        Decode token IDs to text.
+        
+        Args:
+            ids: Token IDs
+            skip_special_tokens: Whether to skip special tokens
+            
+        Returns:
+            Decoded text
+        """
+        if isinstance(ids, torch.Tensor):
+            ids = ids.tolist()
+        return self.tokenizer.decode(ids, skip_special_tokens=skip_special_tokens)

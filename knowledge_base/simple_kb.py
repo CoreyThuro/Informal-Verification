@@ -242,7 +242,7 @@ class SimpleKnowledgeBase:
         
         return tactics
     
-    def _parse_tactic(self, tactic_str: str) -> Tuple[TacticType, List[str]]:
+    def _parse_tactic(self, tactic_str: str) -> tuple[TacticType, List[str]]:
         """
         Parse a tactic string into type and arguments.
         

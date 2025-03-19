@@ -1,11 +1,15 @@
-# translation/hybrid_translator.py
+"""
+Hybrid translator that combines NaturalProofs with rule-based translation.
+"""
+
 import logging
 from typing import Dict, Any, Optional
 
-from core.understanding.mathematical_parser import MathematicalParser
 from backends.backend_interface import BackendRegistry
 from knowledge_base.simple_kb import SimpleKnowledgeBase
 from verification.feedback_loop import process_verification_result, apply_feedback_fixes
+from core.understanding.mathematical_parser import MathematicalParser
+from nlp import parse_mathematical_proof
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +25,18 @@ class HybridTranslator:
             model_path: Optional path to a pre-trained model
             use_llm: Whether to use LLM assistance for translation
         """
-        self.parser = MathematicalParser(model_path)
         self.kb = SimpleKnowledgeBase()
+        
+        # Try to initialize the NaturalProofs parser
+        try:
+            self.np_parser = MathematicalParser(model_path)
+            self.use_np = True
+            logger.info(f"Initialized NaturalProofs parser for {target_prover}")
+        except Exception as e:
+            logger.warning(f"Could not initialize NaturalProofs parser: {e}. Using fallback parser.")
+            self.use_np = False
+        
+        # Initialize the backend
         self.backend = BackendRegistry.get_backend(target_prover)
         self.target_prover = target_prover
         self.use_llm = use_llm
@@ -42,21 +56,30 @@ class HybridTranslator:
         """
         # Step 1: Parse and understand the proof
         logger.info("Parsing and understanding the proof")
-        parsed_proof = self.parser.parse_proof(theorem_text, proof_text)
         
-        # Step 2: Convert to our IR format
-        logger.info("Converting to IR format")
-        proof_ir = self.parser.convert_to_ir(parsed_proof)
+        if self.use_np:
+            # Use NaturalProofs parser
+            try:
+                proof_ir = self.np_parser.parse_and_convert(theorem_text, proof_text)
+                logger.info("Successfully used NaturalProofs parser")
+            except Exception as e:
+                logger.warning(f"NaturalProofs parsing failed: {e}. Falling back to standard parser.")
+                parsed_proof = parse_mathematical_proof(f"{theorem_text}\n\nProof: {proof_text}")
+                proof_ir = parsed_proof["proof_ir"]
+        else:
+            # Use standard parser
+            parsed_proof = parse_mathematical_proof(f"{theorem_text}\n\nProof: {proof_text}")
+            proof_ir = parsed_proof["proof_ir"]
         
-        # Step 3: Enhance IR with domain-specific knowledge
+        # Step 2: Enhance IR with domain-specific knowledge
         logger.info("Enhancing with domain-specific knowledge")
         self._enhance_with_domain_knowledge(proof_ir)
         
-        # Step 4: Generate formal proof using our backend
+        # Step 3: Generate formal proof using our backend
         logger.info(f"Generating formal proof using {self.target_prover} backend")
         formal_proof = self.backend.translate(proof_ir)
         
-        # Step 5: Verify and refine if needed
+        # Step 4: Verify and refine if needed
         verified = False
         error_message = None
         
@@ -64,7 +87,7 @@ class HybridTranslator:
             logger.info("Verifying the proof")
             verified, error_message = self.backend.verify(formal_proof)
             
-            # Step 6: Apply feedback if verification failed
+            # Step 5: Apply feedback if verification failed
             if not verified:
                 logger.info("Verification failed, applying feedback")
                 
@@ -108,8 +131,8 @@ class HybridTranslator:
             "formal_proof": formal_proof,
             "verified": verified,
             "error_message": error_message,
-            "domain": parsed_proof["domain"],
-            "pattern": parsed_proof["pattern"]["name"]
+            "domain": proof_ir.domain.get("primary_domain", ""),
+            "pattern": proof_ir.pattern.get("name", "")
         }
     
     def _enhance_with_domain_knowledge(self, proof_ir):
@@ -165,3 +188,19 @@ class HybridTranslator:
         except Exception as e:
             logger.error(f"Error in LLM fixing: {e}")
             return formal_proof
+    
+    def translate_with_rules(self, proof_ir):
+        """
+        Translate using only rule-based translation (no NaturalProofs or LLM).
+        
+        Args:
+            proof_ir: The proof intermediate representation
+            
+        Returns:
+            The translated formal proof
+        """
+        # Enhance with domain knowledge
+        self._enhance_with_domain_knowledge(proof_ir)
+        
+        # Translate with backend
+        return self.backend.translate(proof_ir)

@@ -10,7 +10,7 @@ import transformers
 from typing import List, Dict, Any, Optional, Union
 
 # Import our local utils implementation instead of NaturalProofs
-import core.utils.utils as utils
+import core.models.utils.utils as utils
 
 class SequenceModel:
     """Simplified version of the SequenceRetriever for inference only."""

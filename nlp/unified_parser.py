@@ -49,6 +49,7 @@ class UnifiedProofParser:
         # Initialize the LaTeX parser if requested
         if use_latex_parser:
             try:
+                from nlp.latex_parser import LatexParser
                 self.latex_parser = LatexParser()
                 logger.info("Initialized LaTeX parser")
             except Exception as e:

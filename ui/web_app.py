@@ -19,15 +19,12 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import uvicorn
 
-from nlp.proof_parser import parse_math_proof
+from nlp import parse_mathematical_proof
 from nlp.domain_detector import DomainDetector
-from nlp.pattern_recognizer import PatternRecognizer 
-from ir.proof_builder import ProofBuilder
-from translation.translator import translate_proof
-from translation.strategy_selector import select_translation_strategy
+from nlp.pattern_recognizer import recognize_pattern
+from translation.hybrid_translator import HybridTranslator
 from backends.backend_interface import BackendRegistry
 from utils.error_handler import handle_error
-from translation.hybrid_translator import HybridTranslator
 
 logger = logging.getLogger("formal_verification")
 logger.setLevel(logging.DEBUG)
@@ -383,14 +380,14 @@ if not os.path.exists(js_path):
 });
 """)
 
-# Background task to process and translate proofs
+# Background task to process and translate proofs using the hybrid translator
 async def process_proof(
     proof_text: str,
     target_prover: str,
     use_llm: bool
 ) -> Dict[str, Any]:
     """
-    Process and translate a proof as a background task.
+    Process and translate a proof as a background task using the hybrid translator.
     
     Args:
         proof_text: The proof text
@@ -402,7 +399,7 @@ async def process_proof(
     """
     try:
         # Parse the proof
-        parsed_info = parse_math_proof(proof_text)
+        parsed_info = parse_mathematical_proof(proof_text)
         
         # Extract theorem and proof
         theorem_text = parsed_info["theorem_text"]
@@ -412,81 +409,47 @@ async def process_proof(
         if not theorem_text and not proof_text:
             theorem_text = proof_text = parsed_info["original_text"]
         
-        # Detect domain
+        # Create the hybrid translator
+        translator = HybridTranslator(target_prover=target_prover, use_llm=use_llm)
+        
+        # Detect domain and pattern for the UI
         domain_detector = DomainDetector()
         domain_info = domain_detector.detect_domain(theorem_text, proof_text)
+        pattern_info = recognize_pattern(proof_text)
         
-        # Recognize pattern
-        pattern_recognizer = PatternRecognizer()
-        pattern_info = pattern_recognizer.recognize_pattern(proof_text)
+        # Translate using the hybrid translator
+        logger.info(f"Translating using the hybrid translator (use_llm: {use_llm})")
+        result = translator.translate(theorem_text, proof_text)
         
-        # Prepare proof IR
-        proof_builder = ProofBuilder()
-        proof_ir = proof_builder.build_proof_ir(
-            parsed_statements=parsed_info["parsed_statements"],
-            proof_structure=parsed_info["proof_structure"],
-            original_theorem=theorem_text,
-            original_proof=proof_text
-        )
+        # Get the verification result
+        formal_proof = result["formal_proof"]
+        verified = result.get("verified", False)
+        error_message = result.get("error_message")
         
-        # Create hybrid translator
-        from translation.hybrid_translator import HybridTranslator
-        translator = HybridTranslator(use_llm=use_llm, target_prover=target_prover)
+        # Use domain and pattern from result if available, otherwise from detection
+        domain = result.get("domain", domain_info.get("primary_domain", ""))
+        pattern = result.get("pattern", pattern_info.get("primary_pattern", {}).get("name", ""))
         
-        # Get the appropriate backend for verification
-        try:
-            backend = BackendRegistry.get_backend(target_prover)
-        except ValueError as e:
-            return {
-                "formal_proof": f"# Error: {str(e)}",
-                "verification_success": False,
-                "domain_info": domain_info,
-                "pattern_info": pattern_info,
-                "error_message": str(e)
-            }
-        
-        # Translate the proof
-        formal_proof = translator.translate(proof_ir)
-        
-        # Verify the proof
-        verification_success = False
-        error_message = None
-        
-        if backend.is_installed():
-            verification_success, error_message = backend.verify(formal_proof)
-            
-            # If verification failed and using LLM, try rule-based as fallback
-            if not verification_success and use_llm:
-                logger.info("LLM translation failed verification. Trying rule-based fallback.")
-                rule_based_proof = translator.translate_with_rules(proof_ir)
-                
-                # Verify the rule-based translation
-                rb_success, rb_error = backend.verify(rule_based_proof)
-                
-                # If rule-based succeeds where LLM failed, use it instead
-                if rb_success:
-                    formal_proof = rule_based_proof
-                    verification_success = rb_success
-                    error_message = None
-                    logger.info("Rule-based fallback succeeded where LLM failed.")
-        
+        # Prepare response
         return {
             "formal_proof": formal_proof,
-            "verification_success": verification_success,
-            "domain_info": domain_info,
-            "pattern_info": pattern_info,
+            "verification_success": verified,
+            "domain_info": {"primary_domain": domain},
+            "pattern_info": {"primary_pattern": {"name": pattern}},
             "error_message": error_message
         }
     
     except Exception as e:
         handle_error(e, "translation")
+        logger.error(f"Error in process_proof: {str(e)}")
         return {
             "formal_proof": f"# Error: {str(e)}",
             "verification_success": False,
             "domain_info": {},
-            "pattern_info": {},
+            "pattern_info": {"primary_pattern": {"name": "unknown"}},
             "error_message": str(e)
         }
+
 # API routes
 @app.get("/", response_class=HTMLResponse)
 async def get_root(request: Request):
@@ -530,6 +493,22 @@ async def translate_form(
     Returns:
         HTML response
     """
+    # Log the received parameters
+    logger.info(f"Translation request received: target_prover={target_prover}, use_llm={use_llm}")
+    
+    # Check LLM configuration if needed
+    if use_llm:
+        try:
+            from llm.openai_client import verify_openai_setup
+            is_configured, message = verify_openai_setup()
+            logger.info(f"LLM configuration: {message}")
+            
+            if not is_configured:
+                logger.warning("LLM assistance requested but not properly configured")
+        except ImportError:
+            logger.warning("LLM modules not available, proceeding without LLM assistance")
+            use_llm = False
+    
     # Process the proof
     result = await process_proof(proof_text, target_prover, use_llm)
     
@@ -549,51 +528,37 @@ async def translate_form(
         }
     )
 
-@app.post("/translate", response_class=HTMLResponse)
-async def translate_form(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    proof_text: str = Form(...),
-    target_prover: str = Form("coq"),
-    use_llm: bool = Form(False)
-):
+@app.post("/api/translate")
+async def translate_api(input_data: ProofInput):
     """
-    Handle form submission for translation.
-    """
-    # Log the received parameters
-    logger.info(f"Translation request received: target_prover={target_prover}, use_llm={use_llm}")
+    API endpoint for proof translation.
     
-    # Check LLM configuration if needed
-    if use_llm:
-        from llm.openai_client import verify_openai_setup
-        is_configured, message = verify_openai_setup()
-        logger.info(f"LLM configuration: {message}")
+    Args:
+        input_data: The input data
         
-        if not is_configured:
-            logger.warning("LLM assistance requested but not properly configured")
+    Returns:
+        JSON response with translation results
+    """
+    try:
+        # Process the proof
+        result = await process_proof(
+            input_data.proof_text,
+            input_data.target_prover,
+            input_data.use_llm
+        )
+        
+        # Return the translation response
+        return TranslationResponse(
+            formal_proof=result["formal_proof"],
+            verification_success=result["verification_success"],
+            domain_info=result["domain_info"],
+            pattern_info=result["pattern_info"],
+            error_message=result["error_message"]
+        )
     
-    # Process the proof
-    result = await process_proof(proof_text, target_prover, use_llm)
-    
-    # Log the strategy used
-    if use_llm and "strategy_info" in result:
-        logger.info(f"Using strategy: {result.get('strategy_info', {}).get('strategy', 'unknown')}")
-    
-    # Render the template with results
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "proof_text": proof_text,
-            "target_prover": target_prover,
-            "use_llm": use_llm,
-            "formal_proof": result["formal_proof"],
-            "verification_success": result["verification_success"],
-            "domain_info": result["domain_info"],
-            "pattern_info": result["pattern_info"],
-            "error_message": result["error_message"]
-        }
-    )
+    except Exception as e:
+        handle_error(e, "translation")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/domain")
 async def detect_domain_api(input_data: ProofInput):
@@ -608,7 +573,7 @@ async def detect_domain_api(input_data: ProofInput):
     """
     try:
         # Parse the proof
-        parsed_info = parse_math_proof(input_data.proof_text)
+        parsed_info = parse_mathematical_proof(input_data.proof_text)
         
         # Extract theorem and proof
         theorem_text = parsed_info["theorem_text"]
@@ -619,8 +584,7 @@ async def detect_domain_api(input_data: ProofInput):
             theorem_text = proof_text = parsed_info["original_text"]
         
         # Detect domain
-        domain_detector = DomainDetector()
-        domain_info = domain_detector.detect_domain(theorem_text, proof_text)
+        domain_info = detect_domain(theorem_text, proof_text)
         
         return domain_info
     
@@ -641,7 +605,7 @@ async def recognize_pattern_api(input_data: ProofInput):
     """
     try:
         # Parse the proof
-        parsed_info = parse_math_proof(input_data.proof_text)
+        parsed_info = parse_mathematical_proof(input_data.proof_text)
         
         # Extract proof
         proof_text = parsed_info["proof_text"]
@@ -651,8 +615,7 @@ async def recognize_pattern_api(input_data: ProofInput):
             proof_text = parsed_info["original_text"]
         
         # Recognize pattern
-        pattern_recognizer = PatternRecognizer()
-        pattern_info = pattern_recognizer.recognize_pattern(proof_text)
+        pattern_info = recognize_pattern(proof_text)
         
         return pattern_info
     

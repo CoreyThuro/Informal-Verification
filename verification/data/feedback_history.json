@@ -12,5 +12,31 @@
       "pattern": "evenness_proof",
       "timestamp": 1742401551
     }
+  },
+  "1c6f69f05c5a09e2de3a301af0ab22b9": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "general",
+        "message": "Verification failed.",
+        "suggestion": "Check the error message for details."
+      },
+      "domain": "11",
+      "pattern": "evenness_proof",
+      "timestamp": 1742424637
+    }
+  },
+  "73bff71c2bc72205c625f3b6784cfd1c": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "general",
+        "message": "Verification failed.",
+        "suggestion": "Check if 'Assume' is defined or imported correctly."
+      },
+      "domain": "11",
+      "pattern": "direct",
+      "timestamp": 1742424695
+    }
   }
 }

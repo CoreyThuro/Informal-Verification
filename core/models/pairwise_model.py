@@ -1,7 +1,6 @@
-# core/models/pairwise_model.py
 """
-Pairwise model from NaturalProofs for theorem-reference retrieval.
-Modified to work without external dependencies.
+Pairwise model for theorem-reference retrieval.
+Enhanced version of the NaturalProofs model adapted for our codebase.
 """
 
 import torch
@@ -9,8 +8,13 @@ import torch.nn.functional as F
 import transformers
 from typing import List, Dict, Any, Tuple, Optional, Union
 
-class MathematicalModel:
-    """Wrapper around the NaturalProofs pairwise model architecture."""
+from core.models.base_model import BaseModel
+
+class MathematicalModel(BaseModel):
+    """
+    Mathematical understanding model for theorem and reference encoding.
+    Based on NaturalProofs pairwise model architecture but simplified for our needs.
+    """
     
     def __init__(self, model_type: str = 'bert-base-cased', checkpoint_path: Optional[str] = None):
         """
@@ -20,51 +24,54 @@ class MathematicalModel:
             model_type: The transformer model type to use
             checkpoint_path: Optional path to a pre-trained model checkpoint
         """
-        self.model_type = model_type
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_type)
+        super().__init__(model_type, checkpoint_path)
+    
+    def _initialize_model(self, checkpoint_path: Optional[str] = None) -> None:
+        """
+        Initialize the model components.
+        
+        Args:
+            checkpoint_path: Optional path to a checkpoint
+        """
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_type)
         self.pad_idx = self.tokenizer.pad_token_id
         
         # Initialize encoders
-        self.x_encoder = transformers.AutoModel.from_pretrained(model_type)
-        self.r_encoder = transformers.AutoModel.from_pretrained(model_type)
+        self.x_encoder = transformers.AutoModel.from_pretrained(self.model_type)
+        self.r_encoder = transformers.AutoModel.from_pretrained(self.model_type)
         
         # Load checkpoint if provided
         if checkpoint_path:
-            self._load_checkpoint(checkpoint_path)
+            checkpoint = self._load_checkpoint(checkpoint_path)
+            if checkpoint and "state_dict" in checkpoint:
+                self._load_weights(checkpoint["state_dict"])
             
         # Set model to evaluation mode
         self.x_encoder.eval()
         self.r_encoder.eval()
     
-    def _load_checkpoint(self, checkpoint_path: str) -> None:
+    def _load_weights(self, state_dict: Dict[str, torch.Tensor]) -> None:
         """
-        Load weights from a checkpoint.
+        Load weights from a state dictionary.
         
         Args:
-            checkpoint_path: Path to the checkpoint file
+            state_dict: The state dictionary containing model weights
         """
-        try:
-            checkpoint = torch.load(checkpoint_path, map_location='cpu')
-            state_dict = checkpoint['state_dict']
-            
-            # Process state dict to match our model structure
-            x_encoder_dict = {}
-            r_encoder_dict = {}
-            
-            for k, v in state_dict.items():
-                if k.startswith('x_encoder.'):
-                    x_encoder_dict[k.replace('x_encoder.', '')] = v
-                elif k.startswith('r_encoder.'):
-                    r_encoder_dict[k.replace('r_encoder.', '')] = v
-            
-            # Load weights
+        # Process state dict to match our model structure
+        x_encoder_dict = {}
+        r_encoder_dict = {}
+        
+        for k, v in state_dict.items():
+            if k.startswith('x_encoder.'):
+                x_encoder_dict[k.replace('x_encoder.', '')] = v
+            elif k.startswith('r_encoder.'):
+                r_encoder_dict[k.replace('r_encoder.', '')] = v
+        
+        # Load weights
+        if x_encoder_dict:
             self.x_encoder.load_state_dict(x_encoder_dict)
+        if r_encoder_dict:
             self.r_encoder.load_state_dict(r_encoder_dict)
-            
-            print(f"Successfully loaded checkpoint from {checkpoint_path}")
-        except Exception as e:
-            print(f"Error loading checkpoint: {e}")
-            print("Continuing with default pre-trained weights")
     
     def encode_theorem(self, x: Union[str, torch.Tensor, List[int]]) -> torch.Tensor:
         """
@@ -134,6 +141,27 @@ class MathematicalModel:
         
         return r_enc
     
+    def encode(self, text: Union[str, List[str], torch.Tensor]) -> torch.Tensor:
+        """
+        Encode text into a vector representation.
+        Uses the theorem encoder by default.
+        
+        Args:
+            text: The text to encode
+            
+        Returns:
+            Encoded representation
+        """
+        if isinstance(text, list) and all(isinstance(t, str) for t in text):
+            # Batch of strings
+            encodings = []
+            for t in text:
+                encodings.append(self.encode_theorem(t))
+            return torch.stack(encodings)
+        else:
+            # Single item
+            return self.encode_theorem(text)
+    
     def compute_similarity(self, x_enc: torch.Tensor, r_enc: torch.Tensor) -> torch.Tensor:
         """
         Compute similarity between theorem and reference encodings.
@@ -186,3 +214,13 @@ class MathematicalModel:
         top_values, top_indices = similarities[0].topk(k)
         
         return [(references[i], top_values[j].item()) for j, i in enumerate(top_indices)]
+    
+    def to_device(self, device: Union[str, torch.device]) -> None:
+        """
+        Move the model to a device.
+        
+        Args:
+            device: The device to move to
+        """
+        self.x_encoder.to(device)
+        self.r_encoder.to(device)
