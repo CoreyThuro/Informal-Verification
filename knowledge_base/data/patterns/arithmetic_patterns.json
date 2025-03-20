@@ -1,0 +1,126 @@
+
+{
+  "evenness_proof": {
+    "description": "Proof that a number or expression is even",
+    "tactics": {
+      "coq": [
+        {
+          "tactic": "intros x",
+          "description": "Introduce variable x"
+        },
+        {
+          "tactic": "exists x",
+          "description": "Provide witness x for evenness"
+        },
+        {
+          "tactic": "ring",
+          "description": "Solve with ring arithmetic"
+        }
+      ],
+      "lean": [
+        {
+          "tactic": "intro x",
+          "description": "Introduce variable x"
+        },
+        {
+          "tactic": "use x",
+          "description": "Provide witness x for evenness"
+        },
+        {
+          "tactic": "ring",
+          "description": "Solve with ring arithmetic"
+        }
+      ]
+    },
+    "examples": {
+      "coq": [
+        {
+          "theorem": "forall n : nat, n + n = 2 * n",
+          "proof": "intros n. ring."
+        },
+        {
+          "theorem": "forall x : nat, exists k : nat, x + x = 2 * k",
+          "proof": "intros x. exists x. ring."
+        }
+      ],
+      "lean": [
+        {
+          "theorem": "∀ n : Nat, n + n = 2 * n",
+          "proof": "by\n  intro n\n  ring"
+        },
+        {
+          "theorem": "∀ x : Nat, ∃ k : Nat, x + x = 2 * k",
+          "proof": "by\n  intro x\n  use x\n  ring"
+        }
+      ]
+    },
+    "translation_strategy": {
+      "default": "tactic_based",
+      "coq": "tactic_based",
+      "lean": "tactic_based"
+    },
+    "translation_config": {
+      "default": {
+        "parameters": {
+          "evenness_approach": true,
+          "generate_witness": true
+        },
+        "suggested_tactics": [
+          {
+            "tactic_type": "intro",
+            "arguments": ["x"],
+            "description": "Introduce the variable"
+          },
+          {
+            "tactic_type": "exists",
+            "arguments": ["x"],
+            "description": "Provide witness for evenness"
+          },
+          {
+            "tactic_type": "custom",
+            "arguments": ["ring"],
+            "description": "Use ring solver"
+          }
+        ]
+      }
+    }
+  },
+  "divisibility_proof": {
+    "description": "Proof about divisibility of numbers",
+    "tactics": {
+      "coq": [
+        {
+          "tactic": "intros",
+          "description": "Introduce variables"
+        },
+        {
+          "tactic": "unfold Z.divide",
+          "description": "Unfold the divide definition"
+        },
+        {
+          "tactic": "exists",
+          "description": "Provide the witness for divisibility"
+        }
+      ],
+      "lean": [
+        {
+          "tactic": "intro",
+          "description": "Introduce variables"
+        },
+        {
+          "tactic": "use",
+          "description": "Provide the witness for divisibility"
+        },
+        {
+          "tactic": "ring",
+          "description": "Solve with ring arithmetic"
+        }
+      ]
+    },
+    "translation_strategy": {
+      "default": "tactic_based",
+      "coq": "tactic_based",
+      "lean": "tactic_based"
+    }
+  }
+}

@@ -1,6 +1,5 @@
 """
-Simple knowledge base for the proof translation system.
-Provides domain-specific knowledge through direct file loading.
+Update knowledge_base/simple_kb.py to enhance the integration with patterns and tactics
 """
 
 import json
@@ -422,3 +421,38 @@ class SimpleKnowledgeBase:
         # (This would be expanded with actual domain-specific notations)
         
         return mappings
+    
+    def get_pattern_config(self, pattern: str, prover: str) -> Dict[str, Any]:
+        """
+        Get configuration for a proof pattern.
+        
+        Args:
+            pattern: The proof pattern name
+            prover: The target theorem prover
+            
+        Returns:
+            Dictionary with pattern configuration
+        """
+        if pattern in self.patterns:
+            pattern_info = self.patterns[pattern]
+            
+            # Try to get a config specific to the prover
+            if "translation_config" in pattern_info:
+                if prover in pattern_info["translation_config"]:
+                    return pattern_info["translation_config"][prover]
+                elif "default" in pattern_info["translation_config"]:
+                    return pattern_info["translation_config"]["default"]
+                
+            # Build a basic config if no specific config exists
+            return {
+                "parameters": {},
+                "suggested_tactics": self.get_tactics_for_pattern(pattern, prover)
+            }
+        
+        return {"parameters": {}, "suggested_tactics": []}
+
+# Utility functions
+
+def create_knowledge_base(data_dir="knowledge_base/data") -> SimpleKnowledgeBase:
+    """Create a new knowledge base instance."""
+    return SimpleKnowledgeBase(data_dir)

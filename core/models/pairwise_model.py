@@ -1,6 +1,6 @@
 """
-Pairwise model for theorem-reference retrieval.
-Enhanced version of the NaturalProofs model adapted for our codebase.
+core/models/pairwise_model.py
+Update the MathematicalModel class to properly handle model_path parameter
 """
 
 import torch
@@ -42,13 +42,28 @@ class MathematicalModel(BaseModel):
         
         # Load checkpoint if provided
         if checkpoint_path:
-            checkpoint = self._load_checkpoint(checkpoint_path)
-            if checkpoint and "state_dict" in checkpoint:
-                self._load_weights(checkpoint["state_dict"])
+            self.load_checkpoint(checkpoint_path)
             
         # Set model to evaluation mode
         self.x_encoder.eval()
         self.r_encoder.eval()
+    
+    def load_checkpoint(self, checkpoint_path: str) -> None:
+        """
+        Load a checkpoint file.
+        
+        Args:
+            checkpoint_path: Path to the checkpoint file
+        """
+        try:
+            checkpoint = self._load_checkpoint(checkpoint_path)
+            if checkpoint and "state_dict" in checkpoint:
+                self._load_weights(checkpoint["state_dict"])
+                print(f"Successfully loaded checkpoint from {checkpoint_path}")
+            else:
+                print(f"Checkpoint at {checkpoint_path} does not contain state_dict")
+        except Exception as e:
+            print(f"Error loading checkpoint: {e}")
     
     def _load_weights(self, state_dict: Dict[str, torch.Tensor]) -> None:
         """

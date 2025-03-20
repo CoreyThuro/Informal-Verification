@@ -443,28 +443,38 @@ class CoqFormatter(ProverBackend):
             proof_ir: The proof IR
             
         Returns:
-            List of lines in the proof
+            List of lines in the proof body
         """
         lines = []
-        
-        # Add intros
-        variables = proof_ir.metadata.get("variables", [])
-        if variables:
-            vars_str = " ".join(variables)
-            lines.append(f"intros {vars_str}.")
-        else:
-            lines.append("intros.")
         
         # Check if this is an evenness proof
         is_evenness_proof = False
         for node in proof_ir.proof_tree:
-            if isinstance(node.content, str) and "even" in node.content.lower() and "x + x" in node.content:
-                is_evenness_proof = True
-                break
+            if isinstance(node.content, str) and "even" in node.content.lower():
+                for var in proof_ir.metadata.get("variables", ["x"]):
+                    if f"{var} + {var}" in node.content:
+                        is_evenness_proof = True
+                        break
         
+        # Add intros - IMPORTANT: Only introduce variables that are in the theorem
+        variables = proof_ir.metadata.get("variables", [])
+        if variables:
+            if is_evenness_proof:
+                # For evenness proofs, we need to introduce just the variable in the theorem
+                var = variables[0] if variables else "x"
+                lines.append(f"intros {var}.")
+            else:
+                # For other proofs, introduce all variables
+                vars_str = " ".join(variables)
+                lines.append(f"intros {vars_str}.")
+        else:
+            lines.append("intros.")
+        
+        # If this is an evenness proof, generate the appropriate tactics
         if is_evenness_proof:
-            lines.append("(* Proof that x + x is even *)")
-            lines.append("exists x.")
+            var = variables[0] if variables else "x"
+            lines.append(f"(* Proof that {var} + {var} is even *)")
+            lines.append(f"exists {var}.")
             lines.append("ring.")
             return lines
         

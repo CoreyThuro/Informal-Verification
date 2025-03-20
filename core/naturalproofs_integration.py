@@ -1,6 +1,6 @@
 """
-NaturalProofs Integration Module.
-Provides a simplified interface to NaturalProofs functionality.
+core/naturalproofs_integration.py
+This file needs to be updated to fix the interface mismatch.
 """
 
 import logging
@@ -36,15 +36,31 @@ class NaturalProofsInterface:
             from core.models.pairwise_model import MathematicalModel
             
             self.tokenizer = MathTokenizer()
-            self.model = MathematicalModel(model_path=model_path)
+            # The key fix: don't pass model_path to MathematicalModel if it doesn't accept it
+            try:
+                # First try with the model_path parameter
+                self.model = MathematicalModel(model_path=model_path)
+                self._has_models = True
+            except TypeError:
+                # If that fails, try without the model_path parameter
+                logger.info("Initializing MathematicalModel without model_path parameter")
+                self.model = MathematicalModel()
+                if model_path:
+                    # If we have a model path, try to load it directly
+                    if hasattr(self.model, 'load_checkpoint'):
+                        self.model.load_checkpoint(model_path)
+                    else:
+                        logger.warning(f"Model doesn't have load_checkpoint method, cannot load {model_path}")
+                self._has_models = True
             
             # Move model to appropriate device
-            if hasattr(self.model, 'x_encoder'):
+            if hasattr(self.model, 'to_device'):
+                self.model.to_device(self.device)
+            elif hasattr(self.model, 'x_encoder'):
                 self.model.x_encoder.to(self.device)
-            if hasattr(self.model, 'r_encoder'):
-                self.model.r_encoder.to(self.device)
+                if hasattr(self.model, 'r_encoder'):
+                    self.model.r_encoder.to(self.device)
                 
-            self._has_models = True
             logger.info("Successfully initialized NaturalProofs models")
         except Exception as e:
             logger.warning(f"Could not initialize NaturalProofs models: {e}")
