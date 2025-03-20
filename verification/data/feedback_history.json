@@ -38,5 +38,75 @@
       "pattern": "direct",
       "timestamp": 1742424695
     }
+  },
+  "c3e84f66d709ef083d4ad0ba2c1c8378": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "syntax_error",
+        "message": "Syntax error",
+        "suggestion": "Check for syntax errors in the proof.",
+        "fix": {}
+      },
+      "domain": "11",
+      "pattern": "induction",
+      "timestamp": 1742432135
+    }
+  },
+  "4f557d73073f25399ff1a5e30389a42d": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "syntax_error",
+        "message": "Syntax error",
+        "suggestion": "Check for syntax errors in the proof.",
+        "fix": {}
+      },
+      "domain": "11",
+      "pattern": "induction",
+      "timestamp": 1742432390
+    }
+  },
+  "1f95e0caf3b26b4bd1bab934d2295e5b": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "syntax_error",
+        "message": "Syntax error",
+        "suggestion": "Check for syntax errors in the proof.",
+        "fix": {}
+      },
+      "domain": "11",
+      "pattern": "direct",
+      "timestamp": 1742433239
+    }
+  },
+  "73d036acdcfa05c175822c622e5c6e87": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "syntax_error",
+        "message": "Syntax error",
+        "suggestion": "Check for syntax errors in the proof.",
+        "fix": {}
+      },
+      "domain": "11",
+      "pattern": "case_analysis",
+      "timestamp": 1742433610
+    }
+  },
+  "e1de98178e92ffb3a0e16769aac8cd35": {
+    "coq": {
+      "success": false,
+      "feedback": {
+        "type": "syntax_error",
+        "message": "Syntax error",
+        "suggestion": "Check for syntax errors in the proof.",
+        "fix": {}
+      },
+      "domain": "11",
+      "pattern": "case_analysis",
+      "timestamp": 1742433648
+    }
   }
 }

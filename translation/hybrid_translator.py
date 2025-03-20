@@ -147,12 +147,33 @@ class HybridTranslator:
         
         logger.debug(f"Enhancing IR with domain: {domain}, pattern: {pattern}")
         
+        # Initialize variable types tracking if not present
+        if "variable_types" not in proof_ir.metadata:
+            proof_ir.metadata["variable_types"] = {}
+        
+        # Determine variable types based on pattern and domain
+        variables = proof_ir.metadata.get("variables", [])
+        
+        # Default type for variables is nat (natural numbers) for most mathematical proofs
+        for var in variables:
+            if var not in proof_ir.metadata["variable_types"]:
+                proof_ir.metadata["variable_types"][var] = "nat"
+        
+        # Check if we need to use Z (integers) instead based on the proof content
+        for node in proof_ir.proof_tree:
+            content = str(node.content).lower()
+            if "integer" in content or "z" in content and not "zero" in content:
+                # Update variable types to Z for integer proofs
+                for var in variables:
+                    proof_ir.metadata["variable_types"][var] = "Z"
+        
         # Add domain-specific library dependencies
-        for var in proof_ir.metadata.get("variables", []):
-            libraries = self.kb.get_libraries_for_concept(var, domain, self.target_prover)
+        for var in variables:
+            var_type = proof_ir.metadata["variable_types"].get(var, "nat")
+            libraries = self.kb.get_libraries_for_concept(var_type, domain, self.target_prover)
             for library in libraries:
-                logger.debug(f"Adding library dependency: {library} for variable {var}")
-                proof_ir.add_library_dependency(library, f"Required for {var}", [var])
+                logger.debug(f"Adding library dependency: {library} for variable {var} of type {var_type}")
+                proof_ir.add_library_dependency(library, f"Required for {var} of type {var_type}", [var])
         
         # Add domain-specific libraries
         domain_libraries = self.kb.get_domain_libraries(domain, self.target_prover)

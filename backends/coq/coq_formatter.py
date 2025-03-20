@@ -175,7 +175,7 @@ class CoqFormatter(ProverBackend):
     
     def _generate_imports(self, proof_ir: ProofIR) -> List[str]:
         """
-        Generate Coq import statements.
+        Generate Coq import statements based on what's actually needed.
         
         Args:
             proof_ir: The proof IR
@@ -183,38 +183,61 @@ class CoqFormatter(ProverBackend):
         Returns:
             List of import statements
         """
-        # Extract domain information
+        # Extract pattern information to determine which imports are needed
+        pattern_name = proof_ir.pattern.get("name", "")
         domain = proof_ir.domain.get("primary_domain", "")
         
-        # Extract concepts from the theorem and proof
-        concepts = []
+        # Track which imports are actually needed
+        needed_imports = set()
         
-        # Add variables
-        concepts.extend(proof_ir.metadata.get("variables", []))
+        # Base imports needed for most proofs
+        needed_imports.add("Require Import Arith.")  # For natural numbers (nat)
         
-        # Add expressions
+        # Only add Lia for proofs that might benefit from it
+        if "arithmetic" in pattern_name or pattern_name in ["induction", "direct"]:
+            needed_imports.add("Require Import Lia.")
+        
+        # Only add ZArith if we're actually working with integers (Z)
+        # Check if we need integer operations
+        uses_integers = False
+        
+        # Check variables for Z type
+        for var, var_type in proof_ir.metadata.get("variable_types", {}).items():
+            if var_type == "Z":
+                uses_integers = True
+                break
+        
+        # Check for integer operations in the content
         for node in proof_ir.proof_tree:
-            if isinstance(node.content, Expression):
-                concepts.append(str(node.content.value))
+            content = str(node.content)
+            if "Z." in content or ": Z" in content:
+                uses_integers = True
+                break
         
-        # Get required imports from the mapper
-        imports = self.mapper.get_library_imports(concepts, domain)
+        # Specific handling for evenness proofs
+        if pattern_name == "evenness_proof":
+            # Evenness proofs typically use natural numbers (nat) and ring
+            needed_imports.add("Require Import Ring.")
+            # Don't need ZArith for basic evenness proofs using natural numbers
+            uses_integers = False
         
-        # Add core imports
-        core_imports = [
-            "Require Import Arith.",
-            "Require Import Lia."
-        ]
+        # Only add ZArith if actually needed
+        if uses_integers:
+            needed_imports.add("Require Import ZArith.")
+            # Only add Znumtheory for number theory with integers
+            if domain == "11":  # Number theory
+                needed_imports.add("Require Import Znumtheory.")
         
-        # Combine and deduplicate
-        all_imports = list(set(core_imports + imports))
+        # Add Ring for algebraic manipulations if needed
+        if "ring" in str(proof_ir.tactics).lower():
+            needed_imports.add("Require Import Ring.")
         
         # Sort for consistency
-        return sorted(all_imports)
+        return sorted(list(needed_imports))
     
     def _generate_theorem_statement(self, proof_ir: ProofIR) -> str:
         """
-        Generate a Coq theorem statement.
+        Generate a Coq theorem statement ensuring consistency with the proof.
         
         Args:
             proof_ir: The proof IR
@@ -224,6 +247,7 @@ class CoqFormatter(ProverBackend):
         """
         # Get the theorem node
         theorem_node = proof_ir.theorem
+        pattern_name = proof_ir.pattern.get("name", "")
         
         # Extract theorem statement
         if isinstance(theorem_node.content, str):
@@ -232,23 +256,33 @@ class CoqFormatter(ProverBackend):
             # If it's an Expression, convert to string
             theorem_text = str(theorem_node.content.value)
         
+        # Extract variables from the theorem text
+        variables = proof_ir.metadata.get("variables", [])
+        
+        # Store the variable name used in the theorem for consistency
+        main_var = variables[0] if variables else "x"
+        
+        # Store this variable in proof_ir's metadata for use in the proof generation
+        if "original_variables" not in proof_ir.metadata:
+            proof_ir.metadata["original_variables"] = {}
+        proof_ir.metadata["original_variables"]["main"] = main_var
+        
         # Convert to Coq syntax
         domain = proof_ir.domain.get("primary_domain", "")
         theorem_coq = self._convert_to_coq_syntax(theorem_text, domain)
         
-        # Check if this is a special case like evenness
-        for node in proof_ir.proof_tree:
-            if isinstance(node.content, str) and "even" in node.content.lower() and "x + x" in node.content:
-                return "Theorem example: forall x: nat, exists k: nat, x + x = 2 * k."
+        # Handle evenness proofs consistently with variable names
+        if pattern_name == "evenness_proof" or "even" in theorem_text.lower() and f"{main_var} + {main_var}" in theorem_text:
+            # Use the same variable that appears in the theorem
+            return f"Theorem example: forall {main_var}: nat, exists k: nat, {main_var} + {main_var} = 2 * k."
         
         # Generate a generic theorem statement if needed
         if not theorem_coq or theorem_coq == theorem_text:
-            variables = proof_ir.metadata.get("variables", [])
             if variables:
                 vars_str = ", ".join([f"{v}: nat" for v in variables])
                 return f"Theorem example: forall {vars_str}, True."
             else:
-                return "Theorem example: True."
+                return f"Theorem example: forall {main_var}: nat, True."
         
         return f"Theorem example: {theorem_coq}."
     
@@ -437,7 +471,7 @@ class CoqFormatter(ProverBackend):
     
     def _generate_direct_proof(self, proof_ir: ProofIR) -> List[str]:
         """
-        Generate a direct Coq proof.
+        Generate a direct Coq proof, maintaining variable consistency.
         
         Args:
             proof_ir: The proof IR
@@ -447,38 +481,46 @@ class CoqFormatter(ProverBackend):
         """
         lines = []
         
-        # Check if this is an evenness proof
-        is_evenness_proof = False
-        for node in proof_ir.proof_tree:
-            if isinstance(node.content, str) and "even" in node.content.lower():
-                for var in proof_ir.metadata.get("variables", ["x"]):
-                    if f"{var} + {var}" in node.content:
-                        is_evenness_proof = True
-                        break
+        # Get the pattern
+        pattern_name = proof_ir.pattern.get("name", "")
         
-        # Add intros - IMPORTANT: Only introduce variables that are in the theorem
-        variables = proof_ir.metadata.get("variables", [])
-        if variables:
-            if is_evenness_proof:
-                # For evenness proofs, we need to introduce just the variable in the theorem
-                var = variables[0] if variables else "x"
-                lines.append(f"intros {var}.")
-            else:
-                # For other proofs, introduce all variables
+        # Use the original variable from the theorem for consistency
+        original_vars = proof_ir.metadata.get("original_variables", {})
+        main_var = original_vars.get("main") if original_vars else None
+        
+        # If no stored original variable, fall back to variables from metadata
+        if not main_var:
+            variables = proof_ir.metadata.get("variables", [])
+            main_var = variables[0] if variables else "x"
+        
+        # Check if this is an evenness proof
+        is_evenness_proof = (pattern_name == "evenness_proof" or 
+                            any(isinstance(node.content, str) and 
+                                "even" in node.content.lower() and 
+                                f"{main_var} + {main_var}" in node.content 
+                                for node in proof_ir.proof_tree))
+        
+        # Add intros - IMPORTANT: Maintain variable consistency with the theorem
+        if is_evenness_proof:
+            # For evenness proofs, we need to introduce the same variable used in the theorem
+            lines.append(f"intros {main_var}.")
+        else:
+            # For other proofs, preserve variable names from theorem
+            variables = proof_ir.metadata.get("variables", [])
+            if variables:
                 vars_str = " ".join(variables)
                 lines.append(f"intros {vars_str}.")
-        else:
-            lines.append("intros.")
+            else:
+                lines.append(f"intros {main_var}.")
         
         # If this is an evenness proof, generate the appropriate tactics
         if is_evenness_proof:
-            var = variables[0] if variables else "x"
-            lines.append(f"(* Proof that {var} + {var} is even *)")
-            lines.append(f"exists {var}.")
+            lines.append(f"(* Proof that {main_var} + {main_var} is even *)")
+            lines.append(f"exists {main_var}.")
             lines.append("ring.")
             return lines
         
-        # Generate steps
+        # Generate steps for other proof types
         has_steps = False
         for node in proof_ir.proof_tree:
             if node.node_type == NodeType.STEP:

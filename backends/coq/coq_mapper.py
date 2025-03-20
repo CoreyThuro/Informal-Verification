@@ -89,7 +89,7 @@ class CoqMapper:
     
     def map_tactic(self, tactic_name: str, args: Optional[List[str]] = None) -> str:
         """
-        Map a tactic name to Coq tactic syntax.
+        Map a tactic name to Coq tactic syntax, handling type-specific cases properly.
         
         Args:
             tactic_name: The tactic name
@@ -98,22 +98,38 @@ class CoqMapper:
         Returns:
             The Coq tactic syntax
         """
+        args = args or []
+        
+        # Check if this is a type-specific tactic that needs special handling
+        if tactic_name == "ring" and args and args[0] in ["Z", "nat", "R"]:
+            # Handle type-specific ring tactics
+            num_type = args[0]
+            remaining_args = args[1:] if len(args) > 1 else []
+            
+            if num_type == "Z":
+                return f"ring_simplify {' '.join(remaining_args)}".strip()
+            elif num_type == "R":
+                return f"field {' '.join(remaining_args)}".strip()
+            # For nat, use standard ring
+        
+        # Default mapping through the tactic_mappings
         if tactic_name in self.tactic_mappings:
             tactic_template = self.tactic_mappings[tactic_name]
             
-            if args:
-                # Insert arguments into the template
-                if "{args}" in tactic_template:
-                    args_str = " ".join(args)
-                    return tactic_template.replace("{args}", args_str)
-                else:
-                    # Append arguments if no placeholder
-                    return f"{tactic_template} {' '.join(args)}"
+            # Replace placeholder with actual arguments
+            if "{args}" in tactic_template:
+                args_str = " ".join(str(arg) for arg in args)
+                return tactic_template.replace("{args}", args_str)
             else:
-                # Return template without args
-                return tactic_template.replace(" {args}", "").replace("{args}", "")
+                # Append arguments if no placeholder
+                base_tactic = tactic_template.replace(" {args}", "").replace("{args}", "")
+                if args:
+                    return f"{base_tactic} {' '.join(args)}"
+                return base_tactic
         
-        # No mapping found, return as-is
+        # No mapping found, return as-is with arguments
+        if args:
+            return f"{tactic_name} {' '.join(args)}"
         return tactic_name
     
     def _initialize_concept_mappings(self) -> Dict[str, str]:
