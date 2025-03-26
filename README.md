@@ -24,8 +24,8 @@ Informal Verification is a tool that automatically translates informal mathemati
 
 1. Clone the repository:
    ```
-   git clone https://github.com/CoreyThuro/lemon-test.git
-   cd lemon-test
+   git clone (https://github.com/CoreyThuro/Informal-Verification.git)
+   cd Informal-Verification
    ```
 
 2. Install dependencies:
