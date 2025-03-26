@@ -1,0 +1,28 @@
+There is no rational number r such that r² = 2.
+
+Proof:
+Suppose, by contradiction, that there exists a rational number r such that r² = 2.
+
+Then r can be written as a/b, where a and b are integers with no common factors (i.e., in lowest form).
+
+Since r² = 2, we have (a/b)² = 2.
+
+This gives us a² = 2b².
+
+Since a² = 2b², we know that a² is even.
+
+If a² is even, then a must be even as well (since the square of an odd number is odd).
+
+So a = 2c for some integer c.
+
+Substituting this back, we get (2c)² = 2b².
+
+Simplifying: 4c² = 2b².
+
+Dividing both sides by 2: 2c² = b².
+
+This means b² is even, which implies b is even.
+
+But now we have both a and b are even, which contradicts our assumption that they have no common factors.
+
+Therefore, our initial assumption must be false, and there is no rational number r such that r² = 2.
