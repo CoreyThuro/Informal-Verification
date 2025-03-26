@@ -34,17 +34,22 @@ app = FastAPI(title="Proof Translator")
 translator = ProofTranslator()
 kb = KnowledgeBase()
 
+# Set up paths correctly - use relative paths instead of absolute
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "web", "static")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "web", "templates")
+
 # Ensure directories exist
-os.makedirs('/web/static', exist_ok=True)
-os.makedirs('/web/static/js', exist_ok=True)
-os.makedirs('/web/static/css', exist_ok=True)
-os.makedirs('/web/templates', exist_ok=True)
+os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(os.path.join(STATIC_DIR, "js"), exist_ok=True)
+os.makedirs(os.path.join(STATIC_DIR, "css"), exist_ok=True)
+os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Templates
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

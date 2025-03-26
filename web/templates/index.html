@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informal to Formal Proof Translator</title>
+    <title>Informal Verification</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
 </head>
 <body>
     <header>
-        <h1>Informal to Formal Proof Translator</h1>
+        <h1>Informal Verification</h1>
     </header>
     
     <main>
@@ -29,6 +29,31 @@
                     <button id="analyze-btn">Analyze</button>
                     <button id="translate-btn">Translate</button>
                     <button id="step-translate-btn">Step-by-Step Translation</button>
+                </div>
+                <div class="examples-section">
+                    <h3>Examples</h3>
+                    <div class="examples-list">
+                        <div class="example" data-example="evenness">
+                            <h4>Evenness Proof</h4>
+                            <p>For all natural numbers n, n + n is even.</p>
+                            <button class="load-example-btn">Load Example</button>
+                        </div>
+                        <div class="example" data-example="induction">
+                            <h4>Induction Proof</h4>
+                            <p>For all natural numbers n, the sum 0 + 1 + ... + n equals n(n+1)/2.</p>
+                            <button class="load-example-btn">Load Example</button>
+                        </div>
+                        <div class="example" data-example="contradiction">
+                            <h4>Contradiction Proof</h4>
+                            <p>There is no rational number r such that r² = 2.</p>
+                            <button class="load-example-btn">Load Example</button>
+                        </div>
+                        <div class="example" data-example="cases">
+                            <h4>Case Analysis Proof</h4>
+                            <p>For any integer n, n² - n is even.</p>
+                            <button class="load-example-btn">Load Example</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             

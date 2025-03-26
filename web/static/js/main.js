@@ -1,5 +1,25 @@
 // Main JavaScript for Proof Translator UI
 
+// Example proofs
+const examples = {
+    'evenness': {
+        theorem: 'For all natural numbers n, n + n is even.',
+        proof: 'Let n be any natural number. Then n + n = 2 * n, which is even by definition since it is divisible by 2. This completes the proof.'
+    },
+    'induction': {
+        theorem: 'For all natural numbers n, the sum 0 + 1 + 2 + ... + n equals n(n+1)/2.',
+        proof: 'We prove this by induction on n.\n\nBase case: When n = 0, the sum is 0, and the formula gives 0(0+1)/2 = 0, so the formula holds.\n\nInductive step: Assume the formula holds for some k, so 0 + 1 + ... + k = k(k+1)/2.\n\nWe need to show it holds for n = k+1.\n\nWe have:\n0 + 1 + ... + k + (k+1) = k(k+1)/2 + (k+1)\n                          = (k+1)(k/2 + 1)\n                          = (k+1)(k+2)/2\n\nThis is the formula for n = k+1. Thus, by induction, the formula holds for all natural numbers n.'
+    },
+    'contradiction': {
+        theorem: 'There is no rational number r such that r² = 2.',
+        proof: 'Suppose, by contradiction, that there exists a rational number r such that r² = 2.\n\nThen r can be written as a/b, where a and b are integers with no common factors (i.e., in lowest form).\n\nSince r² = 2, we have (a/b)² = 2.\n\nThis gives us a² = 2b².\n\nSince a² = 2b², we know that a² is even.\n\nIf a² is even, then a must be even as well (since the square of an odd number is odd).\n\nSo a = 2c for some integer c.\n\nSubstituting this back, we get (2c)² = 2b².\n\nSimplifying: 4c² = 2b².\n\nDividing both sides by 2: 2c² = b².\n\nThis means b² is even, which implies b is even.\n\nBut now we have both a and b are even, which contradicts our assumption that they have no common factors.\n\nTherefore, our initial assumption must be false, and there is no rational number r such that r² = 2.'
+    },
+    'cases': {
+        theorem: 'For any integer n, n² - n is even.',
+        proof: 'We will prove this by considering two cases: when n is even and when n is odd.\n\nCase 1: n is even.\nIf n is even, then n = 2k for some integer k.\nSubstituting, we get:\nn² - n = (2k)² - 2k\n       = 4k² - 2k\n       = 2(2k² - k)\n\nSince 2k² - k is an integer, n² - n = 2(2k² - k) is even.\n\nCase 2: n is odd.\nIf n is odd, then n = 2k + 1 for some integer k.\nSubstituting, we get:\nn² - n = (2k + 1)² - (2k + 1)\n       = 4k² + 4k + 1 - 2k - 1\n       = 4k² + 2k\n       = 2(2k² + k)\n\nSince 2k² + k is an integer, n² - n = 2(2k² + k) is even.\n\nSince n² - n is even in both cases, and any integer must be either even or odd, we conclude that for any integer n, n² - n is even.'
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize CodeMirror editors
     const formalProofEditor = CodeMirror(document.getElementById('formal-proof-editor'), {
@@ -401,5 +421,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Copy failed:', err);
                 alert('Failed to copy to clipboard.');
             });
+    });
+
+    // Load example proofs
+    document.querySelectorAll('.load-example-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const exampleType = button.parentElement.getAttribute('data-example');
+            if (examples[exampleType]) {
+                document.getElementById('theorem').value = examples[exampleType].theorem;
+                document.getElementById('proof').value = examples[exampleType].proof;
+                
+                // Scroll to the top of the input section
+                const inputSection = document.querySelector('.input-section');
+                inputSection.scrollIntoView({ behavior: 'smooth' });
+                
+                // Highlight the input fields briefly
+                const theoremField = document.getElementById('theorem');
+                const proofField = document.getElementById('proof');
+                
+                theoremField.style.transition = 'background-color 1s';
+                proofField.style.transition = 'background-color 1s';
+                
+                theoremField.style.backgroundColor = '#f0f8ff';
+                proofField.style.backgroundColor = '#f0f8ff';
+                
+                setTimeout(() => {
+                    theoremField.style.backgroundColor = '';
+                    proofField.style.backgroundColor = '';
+                }, 1500);
+            }
+        });
     });
 });
