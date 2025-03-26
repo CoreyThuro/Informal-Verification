@@ -1,56 +1,291 @@
-/* Main styles for the proof translator */
+/* Main Styles for Proof Translator UI */
+
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --accent-color: #e74c3c;
+    --light-color: #ecf0f1;
+    --dark-color: #34495e;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --error-color: #e74c3c;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
 body {
-    background-color: #f8f9fa;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
 }
 
-.card {
-    border-radius: 10px;
-    margin-bottom: 20px;
+header {
+    background-color: var(--secondary-color);
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.card-header {
-    background-color: #f1f8ff;
-    border-bottom: 1px solid #d0e3ff;
+main {
+    padding: 2rem;
 }
 
-.example-box {
-    padding: 15px;
-    border: 1px solid #e0e0e0;
+.container {
+    display: flex;
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Input Section */
+.input-section {
+    flex: 1;
+    background-color: white;
     border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.example-box:hover {
-    background-color: #f1f8ff;
-    border-color: #b8daff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.form-group {
+    margin-bottom: 1.5rem;
 }
 
-textarea.form-control {
-    font-family: 'Consolas', 'Monaco', monospace;
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: var(--dark-color);
+}
+
+textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: 'Courier New', monospace;
     font-size: 14px;
 }
 
-pre {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 5px;
-    border: 1px solid #e9ecef;
-    font-family: 'Consolas', 'Monaco', monospace;
-    overflow-x: auto;
+.button-group {
+    display: flex;
+    gap: 0.75rem;
 }
 
-.badge {
-    font-weight: 500;
-    padding: 6px 10px;
-    margin-left: 5px;
+button {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
 }
 
-footer {
-    background-color: #f8f9fa;
-    border-top: 1px solid #e9ecef;
+button:hover {
+    background-color: #2980b9;
+}
+
+#analyze-btn {
+    background-color: var(--secondary-color);
+}
+
+#analyze-btn:hover {
+    background-color: #1a2530;
+}
+
+#step-translate-btn {
+    background-color: var(--accent-color);
+}
+
+#step-translate-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Output Section */
+.output-section {
+    flex: 1.2;
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.translation-info {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    font-size: 0.85rem;
+    color: #777;
+}
+
+#verification-value.success {
+    color: var(--success-color);
+}
+
+#verification-value.error {
+    color: var(--error-color);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.tab-btn {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+
+.tab-btn:hover {
+    background-color: #f9f9f9;
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    background-color: transparent;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Editor Toolbar */
+.editor-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+#verify-btn {
+    background-color: var(--success-color);
+}
+
+#verify-btn:hover {
+    background-color: #27ae60;
+}
+
+#apply-feedback-btn {
+    background-color: var(--warning-color);
+}
+
+#apply-feedback-btn:hover {
+    background-color: #d35400;
+}
+
+/* CodeMirror customization */
+.CodeMirror {
+    height: 350px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Step-by-Step View */
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.steps-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+#step-counter {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.step-info {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border-left: 4px solid var(--primary-color);
+}
+
+/* Analysis Tab */
+.analysis-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.analysis-section h3 {
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+#pattern-info, #domain-info, #tactics-info {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+/* Error Section */
+.error-section {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #fef2f2;
+    border-left: 4px solid var(--error-color);
+    border-radius: 4px;
+    display: none;
+}
+
+.error-section.visible {
+    display: block;
+}
+
+#error-message {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: #fff;
+    border: 1px solid #f5c2c7;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 1100px) {
+    .container {
+        flex-direction: column;
+    }
 }

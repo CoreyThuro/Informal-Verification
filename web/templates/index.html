@@ -3,84 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informal Verification</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <title>Informal to Formal Proof Translator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
 </head>
 <body>
-    <div class="container mt-4">
-        <h1 class="text-center mb-4">Informal Verification</h1>
-        <p class="lead text-center">Translate informal mathematical proofs to formal Coq proofs</p>
-        
-        <div class="card shadow">
-            <div class="card-body">
-                <form action="/translate-form" method="post">
-                    <div class="mb-3">
-                        <label for="theorem" class="form-label">Theorem Statement</label>
-                        <textarea class="form-control" id="theorem" name="theorem" rows="3" placeholder="For all natural numbers n, n + n is even." required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="proof" class="form-label">Informal Proof</label>
-                        <textarea class="form-control" id="proof" name="proof" rows="8" placeholder="Let n be a natural number. Then n + n = 2 * n, which is even by definition." required></textarea>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Translate</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div class="card mt-4 shadow">
-            <div class="card-header">
-                <h5>Example Theorems</h5>
-            </div>
-            <div class="card-body">
-                <div class="example-box mb-3" onclick="loadExample(0)">
-                    <h6>Evenness Proof</h6>
-                    <p><strong>Theorem:</strong> For all natural numbers n, n + n is even.</p>
-                </div>
-                <div class="example-box mb-3" onclick="loadExample(1)">
-                    <h6>Induction Proof</h6>
-                    <p><strong>Theorem:</strong> For all natural numbers n, 0 + 1 + 2 + ... + n = n(n+1)/2.</p>
-                </div>
-                <div class="example-box mb-3" onclick="loadExample(2)">
-                    <h6>Contradiction Proof</h6>
-                    <p><strong>Theorem:</strong> There is no rational number r such that r² = 2.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <footer class="mt-5 py-3 text-center text-muted">
+    <header>
+        <h1>Informal to Formal Proof Translator</h1>
+    </header>
+    
+    <main>
         <div class="container">
-            <p>Formal Proof Translation System</p>
+            <div class="input-section">
+                <h2>Input</h2>
+                <div class="form-group">
+                    <label for="theorem">Theorem:</label>
+                    <textarea id="theorem" placeholder="Enter your theorem statement here..."></textarea>
+                </div>
+            </div>
         </div>
-    </footer>
-
-    <script>
-        // Example theorems and proofs
-        const examples = [
-            {
-                theorem: "For all natural numbers n, n + n is even.",
-                proof: "Let n be a natural number. Then n + n = 2 * n, which is even by definition since it's divisible by 2."
-            },
-            {
-                theorem: "For all natural numbers n, the sum 0 + 1 + 2 + ... + n equals n(n+1)/2.",
-                proof: "We prove this by induction on n. Base case: When n = 0, the sum is 0, and 0(0+1)/2 = 0, so the formula holds. Inductive step: Assume the formula holds for some k, so 0 + 1 + ... + k = k(k+1)/2. We need to show it holds for n = k+1. We have 0 + 1 + ... + k + (k+1) = k(k+1)/2 + (k+1) = (k+1)(k/2 + 1) = (k+1)(k+2)/2, which is the formula for n = k+1. Thus, by induction, the formula holds for all natural numbers n."
-            },
-            {
-                theorem: "There is no rational number r such that r² = 2.",
-                proof: "Suppose by contradiction that there is a rational number r such that r² = 2. Then r can be written as a/b where a and b are integers with no common factors. So (a/b)² = 2, which means a² = 2b². This implies that a² is even, which means a is even. So a = 2c for some integer c. Substituting, we get (2c)² = 2b², so 4c² = 2b², thus b² = 2c². This means b² is even, so b is even. But this contradicts our assumption that a and b have no common factors, since both would be even. Therefore, there is no rational number r such that r² = 2."
-            }
-        ];
-
-        function loadExample(index) {
-            if (index >= 0 && index < examples.length) {
-                document.getElementById('theorem').value = examples[index].theorem;
-                document.getElementById('proof').value = examples[index].proof;
-            }
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    </main>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/coq/coq.min.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>
+                <div class="form-group">
+                    <label for="proof">Proof:</label>
+                    <textarea id="proof" placeholder="Enter your informal proof here..."></textarea>
+                </div>
+                <div class="button-group">
+                    <button id="analyze-btn">Analyze</button>
+                    <button id="translate-btn">Translate</button>
+                    <button id="step-translate-btn">Step-by-Step Translation</button>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h2>Output</h2>
+                <div class="translation-info">
+                    <div class="info-item">
+                        <span class="label">Pattern:</span>
+                        <span id="pattern-value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Domain:</span>
+                        <span id="domain-value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Verification:</span>
+                        <span id="verification-value">-</span>
+                    </div>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="formal-proof">Formal Proof</button>
+                    <button class="tab-btn" data-tab="step-by-step">Step-by-Step</button>
+                    <button class="tab-btn" data-tab="analysis">Analysis</button>
+                </div>
+                
+                <div class="tab-content">
+                    <div id="formal-proof" class="tab-pane active">
+                        <div class="editor-toolbar">
+                            <button id="verify-btn">Verify</button>
+                            <button id="apply-feedback-btn">Apply Feedback</button>
+                            <button id="copy-btn">Copy to Clipboard</button>
+                        </div>
+                        <div id="formal-proof-editor"></div>
+                    </div>
+                    
+                    <div id="step-by-step" class="tab-pane">
+                        <div class="steps-container">
+                            <div class="steps-navigation">
+                                <button id="prev-step">Previous</button>
+                                <span id="step-counter">Step 0/0</span>
+                                <button id="next-step">Next</button>
+                            </div>
+                            <div class="step-info">
+                                <h3 id="step-name">-</h3>
+                                <p id="step-description">-</p>
+                            </div>
+                            <div id="step-code-editor"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="analysis" class="tab-pane">
+                        <div class="analysis-section">
+                            <h3>Pattern Information</h3>
+                            <div id="pattern-info"></div>
+                            
+                            <h3>Domain Information</h3>
+                            <div id="domain-info"></div>
+                            
+                            <h3>Recommended Tactics</h3>
+                            <div id="tactics-info"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="error-section" id="error-section">
+                    <h3>Verification Error</h3>
+                    <pre id="error-message"></pre>
+                </div>
