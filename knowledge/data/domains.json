@@ -1,0 +1,37 @@
+{
+    "00": {
+      "name": "General Mathematics",
+      "imports": ["Require Import Arith."]
+    },
+    "11": {
+      "name": "Number Theory",
+      "imports": [
+        "Require Import Arith.",
+        "Require Import ZArith.",
+        "Require Import Lia."
+      ],
+      "concepts": ["even", "odd", "prime", "divisible", "gcd"]
+    },
+    "12-20": {
+      "name": "Algebra",
+      "imports": [
+        "Require Import Ring.",
+        "Require Import Field."
+      ],
+      "concepts": ["group", "ring", "field", "algebra"]
+    },
+    "26-42": {
+      "name": "Analysis",
+      "imports": [
+        "Require Import Reals."
+      ],
+      "concepts": ["limit", "continuous", "differentiable"]
+    },
+    "54-55": {
+      "name": "Topology",
+      "imports": [
+        "Require Import Reals."
+      ],
+      "concepts": ["open", "closed", "connected"]
+    }
+  }

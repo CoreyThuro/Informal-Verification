@@ -1,0 +1,37 @@
+{
+    "evenness": {
+      "description": "Proof that a number or expression is even",
+      "template": "exists {var}",
+      "examples": [
+        "forall n: nat, n + n = 2 * n",
+        "forall x: nat, exists k: nat, x + x = 2 * k"
+      ]
+    },
+    "induction": {
+      "description": "Proof by induction on a natural number",
+      "template": "induction {var}",
+      "examples": [
+        "forall n: nat, P(0) -> (forall k: nat, P(k) -> P(S k)) -> P(n)"
+      ]
+    },
+    "contradiction": {
+      "description": "Proof by contradiction",
+      "template": "intro contra. ... contradiction",
+      "examples": [
+        "forall n: nat, ~(P(n) /\\ ~P(n))"
+      ]
+    },
+    "cases": {
+      "description": "Proof by case analysis",
+      "template": "destruct {var}",
+      "examples": [
+        "forall n: nat, n = 0 \\/ exists m, n = S m"
+      ]
+    },
+    "direct": {
+      "description": "Direct proof from assumptions to conclusion",
+      "examples": [
+        "forall a b: nat, a = b -> b = a"
+      ]
+    }
+  }

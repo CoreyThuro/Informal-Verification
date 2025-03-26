@@ -1,0 +1,25 @@
+For any integer n, n² - n is even.
+
+Proof:
+We will prove this by considering two cases: when n is even and when n is odd.
+
+Case 1: n is even.
+If n is even, then n = 2k for some integer k.
+Substituting, we get:
+n² - n = (2k)² - 2k
+       = 4k² - 2k
+       = 2(2k² - k)
+
+Since 2k² - k is an integer, n² - n = 2(2k² - k) is even.
+
+Case 2: n is odd.
+If n is odd, then n = 2k + 1 for some integer k.
+Substituting, we get:
+n² - n = (2k + 1)² - (2k + 1)
+       = 4k² + 4k + 1 - 2k - 1
+       = 4k² + 2k
+       = 2(2k² + k)
+
+Since 2k² + k is an integer, n² - n = 2(2k² + k) is even.
+
+Since n² - n is even in both cases, and any integer must be either even or odd, we conclude that for any integer n, n² - n is even.

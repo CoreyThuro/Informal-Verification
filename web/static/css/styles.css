@@ -1,0 +1,390 @@
+/* Main Styles for Proof Translator UI */
+
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --accent-color: #e74c3c;
+    --light-color: #ecf0f1;
+    --dark-color: #34495e;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --error-color: #e74c3c;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+    font-size: 16px; /* Base font size increased */
+}
+
+header {
+    background-color: var(--secondary-color);
+    color: white;
+    text-align: center;
+    padding: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-size: 2.2rem; /* Proportional header size */
+}
+
+main {
+    padding: 2rem;
+}
+
+h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+}
+
+h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.8rem;
+}
+
+h4 {
+    font-size: 1.2rem;
+}
+
+.container {
+    display: flex;
+    gap: 2rem;
+    max-width: 1500px; /* Slightly wider container */
+    margin: 0 auto;
+}
+
+/* Input Section */
+.input-section {
+    flex: 1;
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.8rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.form-group {
+    margin-bottom: 1.8rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.7rem;
+    font-weight: bold;
+    color: var(--dark-color);
+    font-size: 1.1rem;
+}
+
+textarea {
+    width: 100%;
+    min-height: 180px; /* Taller text areas */
+    padding: 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem; /* Larger font for better readability */
+    line-height: 1.5;
+}
+
+.button-group {
+    display: flex;
+    gap: 0.75rem;
+}
+
+button {
+    padding: 0.8rem 1.2rem; /* Larger buttons */
+    border: none;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    font-size: 1rem; /* Larger button text */
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#analyze-btn {
+    background-color: var(--secondary-color);
+}
+
+#analyze-btn:hover {
+    background-color: #1a2530;
+}
+
+#step-translate-btn {
+    background-color: var(--accent-color);
+}
+
+#step-translate-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Output Section */
+.output-section {
+    flex: 1.2;
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.8rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.translation-info {
+    display: flex;
+    gap: 1.8rem;
+    margin-bottom: 1.8rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid #eee;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    font-size: 0.95rem;
+    color: #777;
+}
+
+#verification-value.success {
+    color: var(--success-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+#verification-value.error {
+    color: var(--error-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid #eee;
+}
+
+.tab-btn {
+    padding: 0.7rem 1.2rem;
+    background-color: transparent;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    font-size: 1.05rem;
+}
+
+.tab-btn:hover {
+    background-color: #f9f9f9;
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    background-color: transparent;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Editor Toolbar */
+.editor-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+#verify-btn {
+    background-color: var(--success-color);
+}
+
+#verify-btn:hover {
+    background-color: #27ae60;
+}
+
+#apply-feedback-btn {
+    background-color: var(--warning-color);
+}
+
+#apply-feedback-btn:hover {
+    background-color: #d35400;
+}
+
+/* CodeMirror customization */
+.CodeMirror {
+    height: 350px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Step-by-Step View */
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.steps-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+#step-counter {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.step-info {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border-left: 4px solid var(--primary-color);
+}
+
+/* Analysis Tab */
+.analysis-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.8rem;
+}
+
+.analysis-section h3 {
+    color: var(--dark-color);
+    margin-bottom: 0.7rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.7rem;
+}
+
+#pattern-info, #domain-info, #tactics-info {
+    padding: 1.2rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+#pattern-info ul, #domain-info ul, #tactics-info ul {
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+#pattern-info li, #domain-info li, #tactics-info li {
+    margin-bottom: 0.5rem;
+}
+
+/* Error Section */
+.error-section {
+    margin-top: 2rem;
+    padding: 1.2rem;
+    background-color: #fef2f2;
+    border-left: 4px solid var(--error-color);
+    border-radius: 4px;
+    display: none;
+}
+
+.error-section.visible {
+    display: block;
+}
+
+.error-section h3 {
+    margin-bottom: 0.8rem;
+    color: var(--error-color);
+}
+
+#error-message {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    white-space: pre-wrap;
+    margin-top: 0.7rem;
+    padding: 1rem;
+    background-color: #fff;
+    border: 1px solid #f5c2c7;
+    border-radius: 4px;
+    max-height: 250px; /* Taller error message area */
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+/* Examples Section */
+.examples-section {
+    margin-top: 2.5rem;
+    border-top: 1px solid #eee;
+    padding-top: 1.5rem;
+}
+
+.examples-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+}
+
+.example {
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    padding: 1.2rem;
+    border-left: 3px solid var(--primary-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.example:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.example h4 {
+    margin-bottom: 0.7rem;
+    color: var(--dark-color);
+    font-size: 1.15rem;
+}
+
+.example p {
+    font-size: 1rem;
+    margin-bottom: 0.9rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+.load-example-btn {
+    background-color: var(--light-color);
+    color: var(--dark-color);
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    font-weight: normal;
+}
+
+.load-example-btn:hover {
+    background-color: #dfe6e9;
+}
+
+/* Responsive Design */
+@media (max-width: 1100px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .examples-list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}

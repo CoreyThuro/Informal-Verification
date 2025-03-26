@@ -1,0 +1,17 @@
+For all natural numbers n, the sum 0 + 1 + 2 + ... + n equals n(n+1)/2.
+
+Proof:
+We prove this by induction on n.
+
+Base case: When n = 0, the sum is 0, and the formula gives 0(0+1)/2 = 0, so the formula holds.
+
+Inductive step: Assume the formula holds for some k, so 0 + 1 + ... + k = k(k+1)/2.
+
+We need to show it holds for n = k+1.
+
+We have:
+0 + 1 + ... + k + (k+1) = k(k+1)/2 + (k+1)
+                         = (k+1)(k/2 + 1)
+                         = (k+1)(k+2)/2
+
+This is the formula for n = k+1. Thus, by induction, the formula holds for all natural numbers n.
