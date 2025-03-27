@@ -1,14 +1,19 @@
-/* Main Styles for Proof Translator UI */
+/* Main Styles for Proof Translator UI - Dark Mode */
 
 :root {
-    --primary-color: #3498db;
-    --secondary-color: #2c3e50;
-    --accent-color: #e74c3c;
-    --light-color: #ecf0f1;
-    --dark-color: #34495e;
-    --success-color: #2ecc71;
-    --warning-color: #f39c12;
-    --error-color: #e74c3c;
+    --primary-color: #4a9eff; /* Brighter blue for dark mode */
+    --secondary-color: #1a2639; /* Dark blue */
+    --accent-color: #ff6b6b; /* Brighter red for dark mode */
+    --light-color: #8b9dc3; /* Muted blue for text */
+    --dark-color: #0f1626; /* Very dark blue */
+    --background-color: #1e293b; /* Dark blue background */
+    --card-color: #283447; /* Slightly lighter than background */
+    --text-color: #e0e7ff; /* Light blue-tinted white */
+    --muted-text-color: #a3b1cc; /* Muted blue-gray */
+    --success-color: #4ade80; /* Brighter green for dark mode */
+    --warning-color: #fbbf24; /* Brighter amber for dark mode */
+    --error-color: #f87171; /* Brighter red for dark mode */
+    --border-color: #3e4c64; /* Subtle border color */
 }
 
 * {
@@ -20,8 +25,8 @@
 body {
     font-family: 'Arial', sans-serif;
     line-height: 1.6;
-    color: #333;
-    background-color: #f5f5f5;
+    color: var(--text-color);
+    background-color: var(--background-color);
     font-size: 16px; /* Base font size increased */
 }
 
@@ -65,10 +70,11 @@ h4 {
 /* Input Section */
 .input-section {
     flex: 1;
-    background-color: white;
+    background-color: var(--card-color);
     border-radius: 8px;
     padding: 1.8rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
 }
 
 .form-group {
@@ -79,7 +85,7 @@ h4 {
     display: block;
     margin-bottom: 0.7rem;
     font-weight: bold;
-    color: var(--dark-color);
+    color: var(--light-color);
     font-size: 1.1rem;
 }
 
@@ -87,12 +93,14 @@ textarea {
     width: 100%;
     min-height: 180px; /* Taller text areas */
     padding: 0.9rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     resize: vertical;
     font-family: 'Courier New', monospace;
     font-size: 1rem; /* Larger font for better readability */
     line-height: 1.5;
+    background-color: var(--dark-color);
+    color: var(--text-color);
 }
 
 .button-group {
@@ -135,10 +143,11 @@ button:hover {
 /* Output Section */
 .output-section {
     flex: 1.2;
-    background-color: white;
+    background-color: var(--card-color);
     border-radius: 8px;
     padding: 1.8rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
 }
 
 .translation-info {
@@ -146,7 +155,7 @@ button:hover {
     gap: 1.8rem;
     margin-bottom: 1.8rem;
     padding-bottom: 1.2rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .info-item {
@@ -156,7 +165,7 @@ button:hover {
 
 .label {
     font-size: 0.95rem;
-    color: #777;
+    color: var(--muted-text-color);
 }
 
 #verification-value.success {
@@ -175,20 +184,20 @@ button:hover {
 .tabs {
     display: flex;
     margin-bottom: 1.2rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .tab-btn {
     padding: 0.7rem 1.2rem;
     background-color: transparent;
-    color: #666;
+    color: var(--muted-text-color);
     border-bottom: 2px solid transparent;
     border-radius: 0;
     font-size: 1.05rem;
 }
 
 .tab-btn:hover {
-    background-color: #f9f9f9;
+    background-color: var(--dark-color);
 }
 
 .tab-btn.active {
@@ -217,7 +226,7 @@ button:hover {
 }
 
 #verify-btn:hover {
-    background-color: #27ae60;
+    background-color: #22c55e;
 }
 
 #apply-feedback-btn {
@@ -225,15 +234,26 @@ button:hover {
 }
 
 #apply-feedback-btn:hover {
-    background-color: #d35400;
+    background-color: #d97706;
 }
 
 /* CodeMirror customization */
 .CodeMirror {
     height: 350px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
+    background-color: var(--dark-color) !important;
+    color: var(--text-color) !important;
+}
+
+.CodeMirror-gutters {
+    background-color: var(--dark-color) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.CodeMirror-linenumber {
+    color: var(--muted-text-color) !important;
 }
 
 /* Step-by-Step View */
@@ -252,12 +272,12 @@ button:hover {
 
 #step-counter {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--muted-text-color);
 }
 
 .step-info {
     padding: 1rem;
-    background-color: #f9f9f9;
+    background-color: var(--dark-color);
     border-radius: 4px;
     border-left: 4px solid var(--primary-color);
 }
@@ -270,18 +290,19 @@ button:hover {
 }
 
 .analysis-section h3 {
-    color: var(--dark-color);
+    color: var(--light-color);
     margin-bottom: 0.7rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.7rem;
 }
 
 #pattern-info, #domain-info, #tactics-info {
     padding: 1.2rem;
-    background-color: #f9f9f9;
+    background-color: var(--dark-color);
     border-radius: 4px;
     font-size: 1.05rem;
     line-height: 1.6;
+    border: 1px solid var(--border-color);
 }
 
 #pattern-info ul, #domain-info ul, #tactics-info ul {
@@ -297,7 +318,7 @@ button:hover {
 .error-section {
     margin-top: 2rem;
     padding: 1.2rem;
-    background-color: #fef2f2;
+    background-color: rgba(254, 202, 202, 0.1);
     border-left: 4px solid var(--error-color);
     border-radius: 4px;
     display: none;
@@ -318,18 +339,19 @@ button:hover {
     white-space: pre-wrap;
     margin-top: 0.7rem;
     padding: 1rem;
-    background-color: #fff;
-    border: 1px solid #f5c2c7;
+    background-color: var(--dark-color);
+    border: 1px solid rgba(245, 194, 199, 0.3);
     border-radius: 4px;
     max-height: 250px; /* Taller error message area */
     overflow-y: auto;
     line-height: 1.5;
+    color: var(--text-color);
 }
 
 /* Examples Section */
 .examples-section {
     margin-top: 2.5rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
 }
 
@@ -341,41 +363,42 @@ button:hover {
 }
 
 .example {
-    background-color: #f9f9f9;
+    background-color: var(--dark-color);
     border-radius: 6px;
     padding: 1.2rem;
     border-left: 3px solid var(--primary-color);
     transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--border-color);
 }
 
 .example:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .example h4 {
     margin-bottom: 0.7rem;
-    color: var(--dark-color);
+    color: var(--light-color);
     font-size: 1.15rem;
 }
 
 .example p {
     font-size: 1rem;
     margin-bottom: 0.9rem;
-    color: #555;
+    color: var(--muted-text-color);
     line-height: 1.5;
 }
 
 .load-example-btn {
-    background-color: var(--light-color);
-    color: var(--dark-color);
+    background-color: var(--secondary-color);
+    color: var(--text-color);
     padding: 0.5rem 1rem;
     font-size: 0.95rem;
     font-weight: normal;
 }
 
 .load-example-btn:hover {
-    background-color: #dfe6e9;
+    background-color: var(--dark-color);
 }
 
 /* Responsive Design */
