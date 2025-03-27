@@ -13,6 +13,8 @@ from typing import Dict, Any, List, Optional
 
 from translator import ProofTranslator
 from patterns.recognizer import recognize_pattern
+from patterns.enhanced_recognizer import enhanced_recognize_pattern
+from patterns.nlp_analyzer import analyze_proof, get_enhanced_pattern
 from knowledge.kb import KnowledgeBase
 from coq.verifier import verify_coq_proof
 from coq.feedback import apply_feedback
@@ -70,8 +72,18 @@ async def translate(req: ProofRequest):
 async def analyze(req: ProofRequest):
     """Analyze a proof without full translation."""
     try:
-        # Recognize pattern and domain
-        pattern, pattern_info = recognize_pattern(req.theorem, req.proof)
+        # Recognize pattern and domain using enhanced recognizer with fallback
+        try:
+            pattern, pattern_info = enhanced_recognize_pattern(req.theorem, req.proof)
+            print(f"Using enhanced pattern recognition: {pattern}")
+        except Exception as e:
+            # Fallback to basic recognizer if enhanced one fails
+            print(f"Enhanced recognizer failed: {e}, falling back to basic recognizer")
+            pattern, pattern_info = recognize_pattern(req.theorem, req.proof)
+        
+        # Get NLP analysis
+        nlp_analysis = analyze_proof(req.theorem, req.proof)
+        
         domain = translator._detect_domain(req.theorem, req.proof)
         
         # Get domain and pattern info
@@ -93,7 +105,13 @@ async def analyze(req: ProofRequest):
             'domain_info': domain_info,
             'imports': imports,
             'pattern_tactics': pattern_tactics,
-            'domain_tactics': domain_tactics
+            'domain_tactics': domain_tactics,
+            'nlp_analysis': {
+                'pattern_scores': nlp_analysis['pattern_scores'],
+                'entities': nlp_analysis['entities'],
+                'variables': nlp_analysis['variables'][:10],  # Limit to top 10 variables
+                'steps': [{'type': step['type'], 'text': step['text'][:50] + '...'} for step in nlp_analysis['steps']]
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -227,6 +245,34 @@ async def apply_feedback_endpoint(req: FeedbackRequest):
         
         return {
             'fixed_proof': fixed_proof
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/nlp_analyze")
+async def nlp_analyze(req: ProofRequest):
+    """Perform detailed NLP analysis on a theorem and proof."""
+    try:
+        # Get full NLP analysis
+        nlp_analysis = analyze_proof(req.theorem, req.proof)
+        
+        # Get enhanced pattern recognition
+        pattern, pattern_info = enhanced_recognize_pattern(req.theorem, req.proof)
+        
+        return {
+            'pattern': pattern,
+            'confidence': pattern_info['structure_info']['confidence'],
+            'variables': pattern_info['variables'],
+            'pattern_scores': nlp_analysis['pattern_scores'],
+            'entities': nlp_analysis['entities'],
+            'variables_nlp': nlp_analysis['variables'][:10],  # Limit to top 10 variables
+            'steps': [{
+                'type': step['type'],
+                'text': step['text'],
+                'role': step.get('role', 'unknown')
+            } for step in nlp_analysis['steps']],
+            'math_entities': pattern_info['structure_info']['math_entities'],
+            'linguistic_features': nlp_analysis.get('linguistic_features', {})
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
