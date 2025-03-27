@@ -16,6 +16,8 @@ from patterns.recognizer import recognize_pattern
 from patterns.enhanced_recognizer import enhanced_recognize_pattern
 from patterns.nlp_analyzer import analyze_proof, get_enhanced_pattern
 from knowledge.kb import KnowledgeBase
+from knowledge.knowledge_graph import default_graph
+from knowledge.graph_analyzer import GraphEnhancedAnalyzer
 from coq.verifier import verify_coq_proof
 from coq.feedback import apply_feedback
 
@@ -35,6 +37,9 @@ class FeedbackRequest(BaseModel):
 app = FastAPI(title="Proof Translator")
 translator = ProofTranslator()
 kb = KnowledgeBase()
+
+# Initialize graph-enhanced analyzer
+graph_analyzer = GraphEnhancedAnalyzer(default_graph)
 
 # Set up paths correctly - use relative paths instead of absolute
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -273,6 +278,33 @@ async def nlp_analyze(req: ProofRequest):
             } for step in nlp_analysis['steps']],
             'math_entities': pattern_info['structure_info']['math_entities'],
             'linguistic_features': nlp_analysis.get('linguistic_features', {})
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/graph_analyze")
+async def graph_analyze(req: ProofRequest):
+    """Perform knowledge graph enhanced analysis on a theorem and proof."""
+    try:
+        # Get graph-enhanced analysis
+        analysis = graph_analyzer.analyze_proof(req.theorem, req.proof)
+        
+        # Get related theorems
+        related_theorems = graph_analyzer.suggest_related_theorems(req.theorem, req.proof)
+        
+        # Get concept explanations
+        theorem_concepts = graph_analyzer.get_concept_explanations(req.theorem)
+        proof_concepts = graph_analyzer.get_concept_explanations(req.proof)
+        
+        return {
+            'pattern': analysis.get('pattern', ''),
+            'confidence': analysis.get('confidence', 0.0),
+            'theorem_concepts': theorem_concepts,
+            'proof_concepts': proof_concepts,
+            'related_theorems': related_theorems,
+            'related_concepts': analysis.get('related_concepts', []),
+            'steps': analysis.get('steps', []),
+            'pattern_scores': analysis.get('pattern_scores', {})
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

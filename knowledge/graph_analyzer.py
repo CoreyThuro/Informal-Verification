@@ -10,28 +10,36 @@ import re
 import spacy
 from spacy.tokens import Doc, Token, Span
 
-from patterns.nlp_analyzer import NLPAnalyzer
+import spacy
+from patterns.nlp_analyzer import analyze_proof, get_enhanced_pattern
 from knowledge.knowledge_graph import MathKnowledgeGraph, default_graph
 
 class GraphEnhancedAnalyzer:
     """
     Analyzer that uses a knowledge graph to enhance NLP analysis of mathematical proofs.
     
-    This class extends the capabilities of the NLPAnalyzer by incorporating
+    This class extends the capabilities of the NLP analyzer functions by incorporating
     domain knowledge from a mathematical knowledge graph.
     """
     
-    def __init__(self, nlp_analyzer: NLPAnalyzer, knowledge_graph: Optional[MathKnowledgeGraph] = None):
+    def __init__(self, knowledge_graph: Optional[MathKnowledgeGraph] = None):
         """
         Initialize the graph-enhanced analyzer.
         
         Args:
-            nlp_analyzer: The base NLP analyzer
             knowledge_graph: Optional knowledge graph (uses default if not provided)
         """
-        self.nlp_analyzer = nlp_analyzer
         self.knowledge_graph = knowledge_graph or default_graph
-        self.nlp = nlp_analyzer.nlp
+        # Load spaCy model
+        try:
+            self.nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            # If the model isn't installed, download it
+            import subprocess
+            import sys
+            print("Downloading spaCy model...")
+            subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+            self.nlp = spacy.load("en_core_web_sm")
     
     def identify_math_concepts(self, text: str) -> List[Dict[str, Any]]:
         """
@@ -208,7 +216,22 @@ class GraphEnhancedAnalyzer:
             Dictionary with analysis results
         """
         # Get base NLP analysis
-        base_analysis = self.nlp_analyzer.analyze_proof(theorem_text, proof_text)
+        base_analysis = analyze_proof(theorem_text, proof_text)
+        
+        # Get enhanced pattern recognition
+        try:
+            pattern, pattern_info = get_enhanced_pattern(theorem_text, proof_text)
+            confidence = pattern_info.get('nlp_confidence', 0.5)  # Use NLP confidence if available
+        except Exception as e:
+            print(f"Warning: Enhanced pattern recognition failed: {e}")
+            # Use the top pattern from pattern scores
+            pattern_scores = base_analysis.get('pattern_scores', {})
+            if pattern_scores:
+                pattern = max(pattern_scores.items(), key=lambda x: x[1])[0]
+                confidence = pattern_scores[pattern] / sum(pattern_scores.values()) if sum(pattern_scores.values()) > 0 else 0.0
+            else:
+                pattern = "unknown"
+                confidence = 0.0
         
         # Identify mathematical concepts
         theorem_concepts = self.identify_math_concepts(theorem_text)
@@ -221,9 +244,6 @@ class GraphEnhancedAnalyzer:
         related_concepts = self.get_related_concepts(concept_names)
         
         # Enhance pattern confidence
-        pattern = base_analysis.get("pattern", "")
-        confidence = base_analysis.get("confidence", 0.0)
-        
         enhanced_confidence, additional_info = self.enhance_pattern_confidence(
             pattern, confidence, theorem_text, proof_text
         )
@@ -231,6 +251,7 @@ class GraphEnhancedAnalyzer:
         # Prepare enhanced analysis
         enhanced_analysis = {
             **base_analysis,
+            "pattern": pattern,
             "confidence": enhanced_confidence,
             "theorem_concepts": theorem_concepts,
             "proof_concepts": proof_concepts,
