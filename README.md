@@ -137,10 +137,7 @@ Implement deeper semantic understanding of mathematical concepts
 
 Improved Pattern Recognition
 
-Support for hybrid proof patterns (e.g., induction + contradiction)
 Enhanced variable and expression extraction
-Integrate natural language processing for better theorem statement parsing
-
 
 Translation Refinement
 
