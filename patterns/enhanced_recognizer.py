@@ -8,6 +8,16 @@ import spacy
 from typing import Dict, List, Tuple, Optional, Any, Set
 from collections import Counter
 
+# Import the NLP analyzer module
+from patterns.nlp_analyzer import (
+    analyze_proof, 
+    extract_math_entities, 
+    score_patterns_nlp, 
+    extract_variables,
+    identify_proof_steps,
+    get_enhanced_pattern
+)
+
 # Load spaCy model
 try:
     nlp = spacy.load("en_core_web_sm")
@@ -209,7 +219,7 @@ class ProofStructureAnalyzer:
 
 def enhanced_recognize_pattern(theorem_text: str, proof_text: str) -> Tuple[str, Dict[str, Any]]:
     """
-    Enhanced pattern recognition for mathematical proofs.
+    Enhanced pattern recognition for mathematical proofs using advanced NLP techniques.
     
     Args:
         theorem_text: The theorem statement
@@ -221,6 +231,42 @@ def enhanced_recognize_pattern(theorem_text: str, proof_text: str) -> Tuple[str,
     # Perform a more direct pattern analysis first
     direct_pattern = _analyze_direct_patterns(theorem_text, proof_text)
     
+    # Perform NLP-based analysis on the proof text
+    nlp_doc = nlp(proof_text)
+    
+    # Extract linguistic features
+    linguistic_features = {
+        "pos_tags": Counter([token.pos_ for token in nlp_doc]),
+        "dependencies": [(token.text, token.dep_, token.head.text) for token in nlp_doc if token.dep_ != "punct"],
+        "entities": [(ent.text, ent.label_) for ent in nlp_doc.ents],
+        "noun_chunks": [chunk.text for chunk in nlp_doc.noun_chunks]
+    }
+    
+    # Enhance direct pattern with linguistic features
+    for token in nlp_doc:
+        # Look for induction indicators
+        if token.lemma_ in ["induct", "base", "hypothesis", "step"]:
+            direct_pattern["scores"]["induction"] += 1
+            
+        # Look for contradiction indicators
+        if token.lemma_ in ["contradict", "contrary", "impossible", "absurd"]:
+            direct_pattern["scores"]["contradiction"] += 1
+            
+        # Look for case analysis indicators
+        if token.lemma_ in ["case", "consider"] or (token.text == "if" and any(t.text == "then" for t in token.children)):
+            direct_pattern["scores"]["cases"] += 1
+            
+        # Look for evenness indicators
+        if token.lemma_ in ["even", "odd", "divisible"] or (token.text == "2" and any(t.dep_ == "nummod" for t in token.children)):
+            direct_pattern["scores"]["evenness"] += 1
+    
+    # Recalculate confidence based on enhanced scores
+    total_score = sum(direct_pattern["scores"].values())
+    if total_score > 0:
+        max_pattern = max(direct_pattern["scores"], key=direct_pattern["scores"].get)
+        direct_pattern["confidence"] = direct_pattern["scores"][max_pattern] / total_score
+        direct_pattern["pattern"] = max_pattern
+    
     # If we have high confidence in the direct pattern, use it
     if direct_pattern["confidence"] > 0.7:
         pattern = direct_pattern["pattern"]
@@ -231,6 +277,9 @@ def enhanced_recognize_pattern(theorem_text: str, proof_text: str) -> Tuple[str,
         pattern_info = analyzer.detect_proof_pattern(theorem_text, proof_text)
         pattern = pattern_info["pattern"]
         print(f"Using enhanced pattern recognition: {pattern}")
+        
+    # Store linguistic features for later use
+    direct_pattern["linguistic_features"] = linguistic_features
     
     # Extract additional information based on the pattern
     result_info = {
@@ -271,7 +320,7 @@ def enhanced_recognize_pattern(theorem_text: str, proof_text: str) -> Tuple[str,
     return pattern, result_info
 
 def _analyze_direct_patterns(theorem_text: str, proof_text: str) -> Dict[str, Any]:
-    """Analyze the proof directly for common patterns."""
+    """Analyze the proof directly for common patterns using enhanced NLP techniques."""
     # Initialize pattern scores
     pattern_scores = {
         "contradiction": 0,
@@ -280,6 +329,35 @@ def _analyze_direct_patterns(theorem_text: str, proof_text: str) -> Dict[str, An
         "direct": 0,
         "evenness": 0
     }
+    
+    # Process text with spaCy for deeper analysis
+    theorem_doc = nlp(theorem_text)
+    proof_doc = nlp(proof_text)
+    
+    # Extract mathematical entities
+    math_entities = {
+        "variables": [],
+        "numbers": [],
+        "operations": []
+    }
+    
+    # Extract variables and mathematical operations
+    for doc in [theorem_doc, proof_doc]:
+        for token in doc:
+            # Identify potential variables (single lowercase letters)
+            if len(token.text) == 1 and token.text.islower() and token.text.isalpha():
+                if token.text not in math_entities["variables"]:
+                    math_entities["variables"].append(token.text)
+            
+            # Identify numbers
+            if token.like_num:
+                if token.text not in math_entities["numbers"]:
+                    math_entities["numbers"].append(token.text)
+            
+            # Identify mathematical operations
+            if token.text in ['+', '-', '*', '/', '=', '<', '>', '≤', '≥']:
+                if token.text not in math_entities["operations"]:
+                    math_entities["operations"].append(token.text)
     
     # Check for evenness pattern in theorem and proof
     if re.search(r'\b(even|divisible by 2|divisible by two)\b', theorem_text.lower()):
@@ -310,6 +388,12 @@ def _analyze_direct_patterns(theorem_text: str, proof_text: str) -> Dict[str, An
         pattern_scores["cases"] += 3
     if re.search(r'\b(consider|split into cases|divide into cases)\b', proof_text.lower()):
         pattern_scores["cases"] += 2
+    if re.search(r'\bcase\s+\d+\b', proof_text.lower()):
+        pattern_scores["cases"] += 3
+    if re.search(r'\b(either|or|when|if)\b.*\b(then)\b', proof_text.lower()):
+        pattern_scores["cases"] += 2
+    if re.search(r'\bwe consider two cases\b', proof_text.lower()):
+        pattern_scores["cases"] += 4
         
     # Direct proof is the fallback
     pattern_scores["direct"] = 1
@@ -317,16 +401,88 @@ def _analyze_direct_patterns(theorem_text: str, proof_text: str) -> Dict[str, An
     # Find the pattern with the highest score
     best_pattern = max(pattern_scores.items(), key=lambda x: x[1])
     
+    # Analyze sentence structure for deeper understanding
+    proof_sentences = [sent for sent in proof_doc.sents]
+    proof_structure = []
+    
+    for i, sent in enumerate(proof_sentences):
+        # Determine the role of each sentence in the proof
+        sent_type = "statement"
+        
+        # First sentence often contains assumptions or setup
+        if i == 0 and any(token.lemma_ in ["let", "assume", "suppose"] for token in sent):
+            sent_type = "assumption"
+        
+        # Look for conclusion indicators
+        elif any(token.lemma_ in ["therefore", "thus", "hence", "conclude"] for token in sent):
+            sent_type = "conclusion"
+        
+        # Look for case analysis indicators
+        elif any(token.lemma_ in ["case", "consider"] for token in sent):
+            sent_type = "case_analysis"
+        
+        # Look for induction indicators
+        elif any(token.text.lower() in ["base", "inductive", "hypothesis"] for token in sent):
+            sent_type = "induction_step"
+        
+        proof_structure.append({
+            "text": sent.text,
+            "type": sent_type,
+            "entities": [token.text for token in sent if len(token.text) == 1 and token.text.islower()]
+        })
+    
     # Only return with reasonable confidence
-    if best_pattern[1] >= 2:
-        return {"pattern": best_pattern[0], "confidence": min(best_pattern[1]/5, 0.9)}
-    else:
-        return {"pattern": "direct", "confidence": 0.5}
+    result = {
+        "pattern": best_pattern[0], 
+        "confidence": min(best_pattern[1]/5, 0.9),
+        "scores": pattern_scores,
+        "math_entities": math_entities,
+        "proof_structure": proof_structure
+    }
+    
+    if best_pattern[1] < 2:
+        result["pattern"] = "direct"
+        result["confidence"] = 0.5
+    
+    return result
 
 def _extract_simple_variables(theorem_text: str, proof_text: str) -> List[str]:
-    """Extract variables with simple regex."""
-    combined = f"{theorem_text} {proof_text}"
-    variables = set(re.findall(r'\b([a-z])\b', combined))
-    return sorted(list(variables))
+    """Extract variables using NLP and regex techniques."""
+    # Process with spaCy for linguistic analysis
+    combined_doc = nlp(theorem_text + " " + proof_text)
     
-    return pattern, result_info
+    # Dictionary to track variables and their importance scores
+    var_scores = {}
+    
+    # Find variables through linguistic analysis
+    for token in combined_doc:
+        # Single lowercase letters are likely variables
+        if len(token.text) == 1 and token.text.islower() and token.text.isalpha():
+            if token.text not in var_scores:
+                var_scores[token.text] = 0
+            
+            # Increase score based on context
+            # Variables in subject position are more important
+            if token.dep_ in ["nsubj", "nsubjpass"]:
+                var_scores[token.text] += 3
+            # Variables that are direct objects are important
+            elif token.dep_ in ["dobj", "pobj"]:
+                var_scores[token.text] += 2
+            # Variables that appear with numbers or mathematical operations
+            elif any(child.like_num or child.text in ['+', '-', '*', '/', '='] for child in token.children):
+                var_scores[token.text] += 2
+            # Default score increase for any occurrence
+            else:
+                var_scores[token.text] += 1
+    
+    # Also use regex as a fallback
+    regex_vars = re.findall(r'\b([a-z])\b', theorem_text + " " + proof_text)
+    for var in regex_vars:
+        if var not in var_scores:
+            var_scores[var] = 0.5
+    
+    # Sort variables by importance score
+    sorted_vars = sorted(var_scores.items(), key=lambda x: x[1], reverse=True)
+    
+    # Extract just the variable names in order of importance
+    return [var for var, score in sorted_vars]
