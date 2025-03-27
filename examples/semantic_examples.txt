@@ -1,0 +1,39 @@
+# Enhanced Semantic Understanding Examples
+
+## Example 1: Simple Evenness Proof
+### Theorem
+For all natural numbers n, n + n is even.
+
+### Proof
+Let n be any natural number. Then n + n = 2 * n, which is even by definition.
+
+## Example 2: Evenness with Divisibility Language
+### Theorem
+For all integers n, the expression 2n^2 + n is divisible by 2.
+
+### Proof
+Let n be an integer. We have 2n^2 + n = n(2n + 1). Since 2n is even, and n(2n + 1) = 2n·(n/2) + n = n + 2n·(n/2), we see that n(2n + 1) is the sum of n and an even number. If n is even, then n(2n + 1) is even. If n is odd, then n(2n + 1) is odd plus even, which is odd. But we know that 2n^2 is always even, so 2n^2 + n is even if and only if n is even. Therefore, 2n^2 + n is divisible by 2.
+
+## Example 3: Induction Proof
+### Theorem
+For all natural numbers n, the sum of the first n natural numbers is n(n+1)/2.
+
+### Proof
+We proceed by induction on n. For the base case, when n = 0, the sum is 0, and 0(0+1)/2 = 0, so the formula holds. Assume that for some k ≥ 0, the sum of the first k natural numbers is k(k+1)/2. We need to prove that the sum of the first k+1 natural numbers is (k+1)(k+2)/2. The sum of the first k+1 natural numbers is (the sum of the first k natural numbers) + (k+1). By the induction hypothesis, this is k(k+1)/2 + (k+1) = k(k+1)/2 + 2(k+1)/2 = (k+1)(k+2)/2. Therefore, the formula holds for all natural numbers n.
+
+## Example 4: Contradiction Proof
+### Theorem
+The square root of 2 is irrational.
+
+### Proof
+Assume, for the sake of contradiction, that the square root of 2 is rational. Then there exist integers p and q with no common factors such that √2 = p/q. Squaring both sides, we get 2 = p²/q², which implies p² = 2q². This means p² is even, which implies p is even (since the square of an odd number is odd). So p = 2k for some integer k. Substituting, we get (2k)² = 2q², or 4k² = 2q², which simplifies to q² = 2k². By the same argument as before, q is even. But this contradicts our assumption that p and q have no common factors, since they're both even. Therefore, √2 cannot be rational.
+
+## Example 5: Cases Proof
+### Theorem
+For any integer n, either n² is even or n² + n is even.
+
+### Proof
+We consider two cases:
+Case 1: n is even. Then n = 2k for some integer k. So n² = (2k)² = 4k² = 2(2k²), which is even.
+Case 2: n is odd. Then n = 2k + 1 for some integer k. So n² + n = (2k + 1)² + (2k + 1) = 4k² + 4k + 1 + 2k + 1 = 4k² + 6k + 2 = 2(2k² + 3k + 1), which is even.
+In either case, the statement holds.

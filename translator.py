@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 import re
 
 from patterns.recognizer import recognize_pattern
+from patterns.enhanced_recognizer import enhanced_recognize_pattern
 from patterns.translators.evenness import translate_evenness_proof
 from patterns.translators.induction import translate_induction_proof
 from patterns.translators.contradiction import translate_contradiction_proof
@@ -35,8 +36,15 @@ class ProofTranslator:
         Returns:
             Dictionary with translation results
         """
-        # Detect pattern and domain
-        pattern, pattern_info = recognize_pattern(theorem_text, proof_text)
+        # Detect pattern and domain using enhanced recognizer with fallback
+        try:
+            pattern, pattern_info = enhanced_recognize_pattern(theorem_text, proof_text)
+            print(f"Using enhanced pattern recognition: {pattern}")
+        except Exception as e:
+            # Fallback to basic recognizer if enhanced one fails
+            print(f"Enhanced recognizer failed: {e}, falling back to basic recognizer")
+            pattern, pattern_info = recognize_pattern(theorem_text, proof_text)
+        
         domain = self._detect_domain(theorem_text, proof_text)
         
         print(f"Detected pattern: {pattern}, domain: {domain}")
@@ -44,7 +52,14 @@ class ProofTranslator:
         # Generate formal proof based on pattern
         if pattern == "evenness":
             variable = pattern_info.get("variable", "n")
-            formal_proof = translate_evenness_proof(variable, domain)
+            # Pass additional context to the enhanced translator
+            formal_proof = translate_evenness_proof(
+                variable, 
+                domain, 
+                theorem_text, 
+                proof_text, 
+                pattern_info.get("structure_info", None)
+            )
         elif pattern == "induction":
             variable = pattern_info.get("variable", "n")
             formal_proof = translate_induction_proof(variable, theorem_text, proof_text, domain)
@@ -93,7 +108,7 @@ class ProofTranslator:
     
     def _detect_domain(self, theorem_text: str, proof_text: str) -> str:
         """
-        Detect the mathematical domain.
+        Detect the mathematical domain with improved semantic analysis.
         
         Args:
             theorem_text: The theorem text
@@ -104,24 +119,57 @@ class ProofTranslator:
         """
         combined = f"{theorem_text} {proof_text}".lower()
         
-        # Domain keywords from knowledge base
-        domain_keywords = {
-            "11": ["prime", "number", "integer", "divisible", "even", "odd", "gcd"],
-            "12-20": ["group", "ring", "field", "algebra", "vector", "matrix"],
-            "26-42": ["limit", "continuous", "derivative", "integral", "function"],
-            "54-55": ["topology", "open", "closed", "compact", "connected"]
+        # Get domain keywords from knowledge base
+        domain_keywords = self.kb.get_domain_keywords() if hasattr(self.kb, 'get_domain_keywords') else {
+            "11": ["prime", "number", "integer", "divisible", "even", "odd", "gcd", 
+                   "divisor", "factor", "multiple", "remainder", "modulo", "congruent"],
+            "12-20": ["group", "ring", "field", "algebra", "vector", "matrix", "linear", 
+                      "polynomial", "homomorphism", "isomorphism", "commutative", "associative"],
+            "26-42": ["limit", "continuous", "derivative", "integral", "function", "series", 
+                      "sequence", "convergent", "divergent", "differentiable", "bounded"],
+            "54-55": ["topology", "open", "closed", "compact", "connected", "neighborhood", 
+                      "homeomorphic", "metric", "space", "continuous"]
         }
         
-        # Count keywords for each domain
-        counts = {domain: 0 for domain in domain_keywords}
+        # Weighted scoring for domain detection
+        scores = {domain: 0 for domain in domain_keywords}
+        
+        # Check for exact keyword matches with context awareness
         for domain, keywords in domain_keywords.items():
             for keyword in keywords:
+                # Simple presence check
                 if keyword in combined:
-                    counts[domain] += 1
+                    scores[domain] += 1
+                    
+                # Check for phrases that strongly indicate a domain
+                strong_indicators = {
+                    "11": ["divisible by", "factor of", "prime number", "greatest common divisor"],
+                    "12-20": ["abelian group", "vector space", "linear algebra", "field extension"],
+                    "26-42": ["continuous function", "derivative of", "converges to", "bounded sequence"],
+                    "54-55": ["open set", "closed set", "compact space", "connected component"]
+                }
+                
+                if domain in strong_indicators:
+                    for indicator in strong_indicators[domain]:
+                        if indicator in combined:
+                            scores[domain] += 3  # Higher weight for strong indicators
         
-        # Return domain with highest count, or default
-        if max(counts.values()) > 0:
-            return max(counts.items(), key=lambda x: x[1])[0]
+        # Check for mathematical symbols that indicate domains
+        symbols = {
+            "11": [r"\bdiv\b", r"\bmod\b", r"\bgcd\b", r"\|", r"≡", r"≢"],
+            "12-20": [r"⊕", r"⊗", r"⊆", r"⊇", r"∈", r"∉", r"∀", r"∃"],
+            "26-42": [r"∫", r"∂", r"∑", r"lim", r"→", r"∞"],
+            "54-55": [r"∩", r"∪", r"⊂", r"⊃", r"∅"]
+        }
+        
+        for domain, domain_symbols in symbols.items():
+            for symbol in domain_symbols:
+                if re.search(symbol, combined):
+                    scores[domain] += 2
+        
+        # Return domain with highest score, or default
+        if max(scores.values()) > 0:
+            return max(scores.items(), key=lambda x: x[1])[0]
         
         return "00"  # General mathematics
     
