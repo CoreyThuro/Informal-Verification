@@ -1,4 +1,4 @@
-# Informal Verification (Minimum Viable Version)
+# Informal Verification (Toy Version)
 
 Informal Verification is a tool that automatically translates informal mathematical proofs into formal Coq proofs. It recognizes different proof patterns, detects the mathematical domain, and generates corresponding formal proofs.
 
